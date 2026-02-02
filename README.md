@@ -10,12 +10,16 @@ cd openclaw-docker
 make quickstart
 ```
 
+On first run, choose your AI provider:
+- **Free (no API key)**: Kimi, MiniMax OAuth, or Qwen OAuth - run `make configure`
+- **Paid**: Anthropic or OpenAI - set API key in `.env` first
+
 Or step by step:
 
 ```bash
 make setup        # creates .env, generates token, copies templates
-# edit .env and add your ANTHROPIC_API_KEY
 make up           # builds and runs gateway
+make configure    # choose your AI provider (free options available)
 make chat         # interactive TUI
 ```
 
@@ -32,17 +36,15 @@ make chat         # interactive TUI
 All config via `.env`:
 
 ```bash
-# required
+# ai providers (all optional - see docs/PROVIDERS.md)
 ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=
+OPENAI_BASE_URL=
 
 # gateway (auto-configured)
 OPENCLAW_GATEWAY_TOKEN=     # auto-generated on setup
 OPENCLAW_GATEWAY_PORT=18789
 OPENCLAW_GATEWAY_BIND=loopback
-
-# optional providers
-OPENAI_API_KEY=
-OPENAI_BASE_URL=
 
 # optional channels
 TELEGRAM_BOT_TOKEN=
@@ -50,6 +52,8 @@ DISCORD_BOT_TOKEN=
 SLACK_BOT_TOKEN=
 SLACK_APP_TOKEN=
 ```
+
+See [docs/PROVIDERS.md](docs/PROVIDERS.md) for available AI providers including free options.
 
 ## Commands
 
@@ -131,6 +135,7 @@ See [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for more options.
 
 ## Documentation
 
+- [PROVIDERS.md](docs/PROVIDERS.md) - AI provider options (free and paid)
 - [SECURITY.md](docs/SECURITY.md) - What Docker protects and doesn't
 - [SKILLS.md](docs/SKILLS.md) - Installing additional skills
 - [WORKSPACES.md](docs/WORKSPACES.md) - Multi-workspace guide
