@@ -1,0 +1,22 @@
+# minimal build context
+.git
+.gitignore
+*.md
+docs/
+backups/
+*.tar.gz
+
+# runtime data (should not be in build)
+data/
+workspaces/
+logs/
+
+# environment files
+.env
+.env.*
+!.env.example
+
+# ide and os
+.idea/
+.vscode/
+.DS_Store

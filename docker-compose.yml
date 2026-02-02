@@ -1,0 +1,77 @@
+services:
+  openclaw-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        EXTRA_APT_PACKAGES: ${EXTRA_APT_PACKAGES:-}
+        OPENCLAW_BROWSER: ${OPENCLAW_BROWSER:-false}
+    container_name: openclaw
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      # gateway config
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+      OPENCLAW_GATEWAY_PORT: ${OPENCLAW_GATEWAY_PORT:-18789}
+      OPENCLAW_GATEWAY_BIND: ${OPENCLAW_GATEWAY_BIND:-loopback}
+      # api keys
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      # channels
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN:-}
+      # browser
+      BROWSER: echo
+    env_file:
+      - .env
+    volumes:
+      - openclaw-home:/home/node
+      - ./data:/home/node/.openclaw
+      - ./workspaces/${OPENCLAW_WORKSPACE:-default}:/home/node/.openclaw/workspace
+    ports:
+      - "127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+    init: true
+    restart: unless-stopped
+    # security hardening
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=64M,mode=1777
+    deploy:
+      resources:
+        limits:
+          memory: ${OPENCLAW_MEMORY_LIMIT:-1536m}
+          pids: 256
+    healthcheck:
+      test: ["CMD", "node", "dist/index.js", "health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  openclaw-cli:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["cli"]
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      BROWSER: echo
+    env_file:
+      - .env
+    volumes:
+      - openclaw-home:/home/node
+      - ./data:/home/node/.openclaw
+      - ./workspaces/${OPENCLAW_WORKSPACE:-default}:/home/node/.openclaw/workspace
+    stdin_open: true
+    tty: true
+    init: true
+    entrypoint: ["node", "dist/index.js"]
+
+volumes:
+  openclaw-home:

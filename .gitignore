@@ -1,0 +1,25 @@
+# environment and secrets
+.env
+*.env.local
+
+# runtime data
+data/
+workspaces/
+logs/
+
+# backups
+*.tar.gz
+backups/
+
+# os files
+.DS_Store
+Thumbs.db
+
+# ide
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# docker
+.docker/

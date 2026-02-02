@@ -1,0 +1,193 @@
+.PHONY: quickstart setup up down restart update rebuild chat logs shell status health configure audit audit-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate ps help
+
+# default workspace
+WORKSPACE ?= default
+
+help:
+	@echo "openclaw-docker makefile"
+	@echo ""
+	@echo "  quick start:"
+	@echo "    quickstart       setup + up + chat (first-time users)"
+	@echo "    setup            first-time initialization"
+	@echo ""
+	@echo "  lifecycle:"
+	@echo "    up               build and start gateway"
+	@echo "    down             stop gateway"
+	@echo "    restart          down + up"
+	@echo "    update           pull latest image and rebuild"
+	@echo "    rebuild          rebuild without cache"
+	@echo ""
+	@echo "  operations:"
+	@echo "    chat             interactive tui (WORKSPACE=name)"
+	@echo "    logs             follow container logs"
+	@echo "    shell            debug shell access"
+	@echo "    status           show model/auth status"
+	@echo "    health           health check"
+	@echo ""
+	@echo "  configuration:"
+	@echo "    configure        run onboarding wizard"
+	@echo "    audit            security audit"
+	@echo "    audit-fix        auto-fix security issues"
+	@echo "    validate         validate docker-compose config"
+	@echo ""
+	@echo "  data management:"
+	@echo "    backup           export data/ and workspaces/"
+	@echo "    restore FILE=x   import from tarball"
+	@echo "    clean            wipe data (with confirmation)"
+	@echo ""
+	@echo "  skills:"
+	@echo "    skill-install SKILL=x    install a skill"
+	@echo "    skill-list               list installed skills"
+	@echo "    skill-remove SKILL=x     remove a skill"
+	@echo ""
+	@echo "  workspaces:"
+	@echo "    workspace-new NAME=x     create new workspace"
+	@echo "    workspace-list           list workspaces"
+	@echo ""
+	@echo "  utilities:"
+	@echo "    ps               show running containers"
+	@echo ""
+
+# === quick start ===
+
+quickstart: setup up
+	@echo ""
+	@echo "starting chat..."
+	@sleep 2
+	@$(MAKE) chat
+
+setup:
+	@chmod +x scripts/setup.sh
+	@./scripts/setup.sh
+
+# === lifecycle ===
+
+up:
+	@echo "building and starting openclaw..."
+	docker compose build
+	docker compose down --remove-orphans 2>/dev/null || true
+	OPENCLAW_WORKSPACE=$(WORKSPACE) docker compose up -d
+	@echo "gateway starting at http://127.0.0.1:$${OPENCLAW_GATEWAY_PORT:-18789}"
+
+down:
+	docker compose down
+
+restart: down up
+
+update:
+	@echo "pulling latest base image and rebuilding..."
+	docker compose build --pull
+	docker compose down --remove-orphans 2>/dev/null || true
+	OPENCLAW_WORKSPACE=$(WORKSPACE) docker compose up -d
+	@echo "updated to latest version"
+
+rebuild:
+	@echo "rebuilding from scratch..."
+	docker compose build --no-cache
+	docker compose down --remove-orphans 2>/dev/null || true
+	OPENCLAW_WORKSPACE=$(WORKSPACE) docker compose up -d
+	@echo "rebuild complete"
+
+# === operations ===
+
+chat:
+	@echo "connecting to workspace: $(WORKSPACE)"
+	@docker compose exec openclaw-gateway sh -c 'node dist/index.js tui --token $$(node -e "console.log(require(\"/home/node/.openclaw/openclaw.json\").gateway.auth.token)")'
+
+logs:
+	docker compose logs -f
+
+shell:
+	docker compose exec openclaw-gateway /bin/sh
+
+status:
+	docker compose exec openclaw-gateway node dist/index.js status
+
+health:
+	docker compose exec openclaw-gateway node dist/index.js health
+
+# === configuration ===
+
+configure:
+	docker compose exec openclaw-gateway node dist/index.js onboard
+
+audit:
+	docker compose exec openclaw-gateway node dist/index.js security audit --deep
+
+audit-fix:
+	docker compose exec openclaw-gateway node dist/index.js security audit --fix
+
+validate:
+	@echo "validating docker-compose.yml..."
+	@docker compose config --quiet && echo "docker-compose.yml is valid"
+
+# === data management ===
+
+backup:
+	@chmod +x scripts/backup.sh
+	@./scripts/backup.sh
+
+restore:
+ifndef FILE
+	@echo "usage: make restore FILE=backup.tar.gz"
+	@exit 1
+endif
+	@chmod +x scripts/restore.sh
+	@./scripts/restore.sh $(FILE)
+
+clean:
+	@echo "this will remove all data and workspaces"
+	@read -p "are you sure? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
+	rm -rf data workspaces
+	@echo "cleaned"
+
+# === skills ===
+
+skill-install:
+ifndef SKILL
+	@echo "usage: make skill-install SKILL=skill-name"
+	@exit 1
+endif
+	docker compose exec openclaw-gateway npm install -g $(SKILL)
+	@echo "skill $(SKILL) installed"
+
+skill-list:
+	docker compose exec openclaw-gateway npm list -g --depth=0
+
+skill-remove:
+ifndef SKILL
+	@echo "usage: make skill-remove SKILL=skill-name"
+	@exit 1
+endif
+	docker compose exec openclaw-gateway npm uninstall -g $(SKILL)
+	@echo "skill $(SKILL) removed"
+
+# === workspaces ===
+
+workspace-new:
+ifndef NAME
+	@echo "usage: make workspace-new NAME=workspace-name"
+	@exit 1
+endif
+	@if [ -d "workspaces/$(NAME)" ]; then \
+		echo "workspace $(NAME) already exists"; \
+		exit 1; \
+	fi
+	@mkdir -p workspaces/$(NAME)
+	@cp -r templates/workspace/* workspaces/$(NAME)/
+	@echo "workspace $(NAME) created"
+	@echo "customize files in workspaces/$(NAME)/"
+	@echo "use with: make chat WORKSPACE=$(NAME)"
+
+workspace-list:
+	@echo "available workspaces:"
+	@ls -1 workspaces 2>/dev/null || echo "  (none - run 'make setup' first)"
+
+# === utilities ===
+
+ps:
+	@echo "running containers:"
+	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+	@echo ""
+	@echo "resource usage:"
+	@docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}"
