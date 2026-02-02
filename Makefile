@@ -65,9 +65,10 @@ quickstart: setup up
 		echo "  1. configure your ai provider:"; \
 		echo "     make configure        # interactive wizard (free providers available)"; \
 		echo ""; \
-		echo "     OR add to .env:"; \
+		echo "     OR add to .env, then restart:"; \
 		echo "     ANTHROPIC_API_KEY=sk-ant-..."; \
 		echo "     OPENAI_API_KEY=sk-..."; \
+		echo "     make restart"; \
 		echo ""; \
 		echo "  2. start chatting:"; \
 		echo "     make chat"; \
@@ -110,6 +111,10 @@ rebuild:
 # === operations ===
 
 chat:
+	@if ! docker compose ps --quiet openclaw-gateway 2>/dev/null | grep -q .; then \
+		echo "error: container not running. run 'make up' first."; \
+		exit 1; \
+	fi
 	@echo "connecting to workspace: $(WORKSPACE)"
 	@docker compose exec openclaw-gateway sh -c 'node dist/index.js tui --token $$(node -e "console.log(require(\"/home/node/.openclaw/openclaw.json\").gateway.auth.token)")'
 
@@ -128,7 +133,14 @@ health:
 # === configuration ===
 
 configure:
+	@if ! docker compose ps --quiet openclaw-gateway 2>/dev/null | grep -q .; then \
+		echo "error: container not running. run 'make up' first."; \
+		exit 1; \
+	fi
 	docker compose exec openclaw-gateway node dist/index.js onboard
+
+# alias for configure (mentioned in some docs)
+onboard: configure
 
 audit:
 	docker compose exec openclaw-gateway node dist/index.js security audit --deep

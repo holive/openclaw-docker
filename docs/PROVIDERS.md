@@ -18,7 +18,7 @@ OpenClaw supports multiple AI providers, including free options that require no 
 
 ```bash
 make up
-make onboard    # launches wizard
+make configure    # launches wizard
 ```
 
 The wizard guides you through selecting and configuring your provider.
@@ -31,7 +31,7 @@ Two options available:
 
 **Kimi Coding (recommended)**
 - Built-in provider, no signup required
-- Select in `make onboard` wizard
+- Select in `make configure` wizard
 
 **Kimi K2.5**
 - Requires Moonshot API key (free tier available)
@@ -87,7 +87,7 @@ OPENAI_BASE_URL=https://your-endpoint.com/v1
 Run the wizard again:
 
 ```bash
-make onboard
+make configure
 ```
 
 Or edit provider settings directly:

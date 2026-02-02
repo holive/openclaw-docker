@@ -11,7 +11,7 @@ services:
       HOME: /home/node
       TERM: xterm-256color
       # gateway config
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-}
       OPENCLAW_GATEWAY_PORT: ${OPENCLAW_GATEWAY_PORT:-18789}
       OPENCLAW_GATEWAY_BIND: ${OPENCLAW_GATEWAY_BIND:-loopback}
       # api keys
@@ -26,7 +26,8 @@ services:
       # browser
       BROWSER: echo
     env_file:
-      - .env
+      - path: .env
+        required: false
     volumes:
       - openclaw-home:/home/node
       - ./data:/home/node/.openclaw
@@ -63,7 +64,8 @@ services:
       TERM: xterm-256color
       BROWSER: echo
     env_file:
-      - .env
+      - path: .env
+        required: false
     volumes:
       - openclaw-home:/home/node
       - ./data:/home/node/.openclaw

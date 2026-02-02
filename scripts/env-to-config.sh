@@ -27,10 +27,10 @@ merge_value() {
 # gateway settings
 merge_value '.gateway.auth.token' "${OPENCLAW_GATEWAY_TOKEN:-}"
 
-# provider api keys
-merge_value '.providers.anthropic.apiKey' "${ANTHROPIC_API_KEY:-}"
-merge_value '.providers.openai.apiKey' "${OPENAI_API_KEY:-}"
-merge_value '.providers.openai.baseUrl' "${OPENAI_BASE_URL:-}"
+# provider api keys (stored in env namespace per openclaw config schema)
+merge_value '.env.ANTHROPIC_API_KEY' "${ANTHROPIC_API_KEY:-}"
+merge_value '.env.OPENAI_API_KEY' "${OPENAI_API_KEY:-}"
+merge_value '.env.OPENAI_BASE_URL' "${OPENAI_BASE_URL:-}"
 
 # channel tokens
 merge_value '.channels.telegram.botToken' "${TELEGRAM_BOT_TOKEN:-}"

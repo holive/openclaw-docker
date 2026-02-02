@@ -30,19 +30,19 @@ merge_config() {
     # merge anthropic api key
     if [ -n "$ANTHROPIC_API_KEY" ]; then
         jq --arg key "$ANTHROPIC_API_KEY" \
-           '.providers.anthropic.apiKey = $key' "$tmp_file" > "${tmp_file}.new" && mv "${tmp_file}.new" "$tmp_file"
+           '.env.ANTHROPIC_API_KEY = $key' "$tmp_file" > "${tmp_file}.new" && mv "${tmp_file}.new" "$tmp_file"
     fi
 
     # merge openai api key
     if [ -n "$OPENAI_API_KEY" ]; then
         jq --arg key "$OPENAI_API_KEY" \
-           '.providers.openai.apiKey = $key' "$tmp_file" > "${tmp_file}.new" && mv "${tmp_file}.new" "$tmp_file"
+           '.env.OPENAI_API_KEY = $key' "$tmp_file" > "${tmp_file}.new" && mv "${tmp_file}.new" "$tmp_file"
     fi
 
     # merge openai base url
     if [ -n "$OPENAI_BASE_URL" ]; then
         jq --arg url "$OPENAI_BASE_URL" \
-           '.providers.openai.baseUrl = $url' "$tmp_file" > "${tmp_file}.new" && mv "${tmp_file}.new" "$tmp_file"
+           '.env.OPENAI_BASE_URL = $url' "$tmp_file" > "${tmp_file}.new" && mv "${tmp_file}.new" "$tmp_file"
     fi
 
     # merge telegram bot token
