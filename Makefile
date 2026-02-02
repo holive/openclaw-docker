@@ -51,10 +51,29 @@ help:
 # === quick start ===
 
 quickstart: setup up
-	@echo ""
-	@echo "starting chat..."
-	@sleep 2
-	@$(MAKE) chat
+	@chmod +x scripts/check-provider.sh
+	@if ./scripts/check-provider.sh; then \
+		echo ""; \
+		echo "starting chat..."; \
+		sleep 2; \
+		$(MAKE) chat; \
+	else \
+		echo ""; \
+		echo "setup complete."; \
+		echo ""; \
+		echo "next steps:"; \
+		echo "  1. configure your ai provider:"; \
+		echo "     make configure        # interactive wizard (free providers available)"; \
+		echo ""; \
+		echo "     OR add to .env:"; \
+		echo "     ANTHROPIC_API_KEY=sk-ant-..."; \
+		echo "     OPENAI_API_KEY=sk-..."; \
+		echo ""; \
+		echo "  2. start chatting:"; \
+		echo "     make chat"; \
+		echo ""; \
+		echo "docs: docs/PROVIDERS.md"; \
+	fi
 
 setup:
 	@chmod +x scripts/setup.sh
