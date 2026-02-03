@@ -45,6 +45,8 @@ jobs:
           echo "OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)" >> .env
           mkdir -p workspaces/default data
           cp -r templates/workspace/* workspaces/default/
+          # fix permissions for node user (uid 1000) in container
+          sudo chown -R 1000:1000 data workspaces
       - name: setup docker buildx
         uses: docker/setup-buildx-action@v3
       - name: build with cache
