@@ -45,12 +45,22 @@ jobs:
           echo "OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)" >> .env
           mkdir -p workspaces/default data
           cp -r templates/workspace/* workspaces/default/
-      - name: build
-        run: docker compose build
+      - name: setup docker buildx
+        uses: docker/setup-buildx-action@v3
+      - name: build with cache
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: openclaw-docker-openclaw-gateway:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: start
-        run: docker compose up -d
+        run: docker compose up -d --no-build
+      - name: show container status
+        run: docker compose ps
       - name: wait for healthy
-        run: make wait-ready
+        run: make wait-ready WAIT_TIMEOUT=120
       - name: verify health
         run: make health
       - name: verify files exist
