@@ -1,4 +1,4 @@
-.PHONY: quickstart setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate ps help test test-quick
+.PHONY: quickstart setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate ps help test test-quick agents-dashboard agents-reset
 
 # default workspace
 WORKSPACE ?= default
@@ -26,6 +26,8 @@ help:
 	@echo "    shell            debug shell access"
 	@echo "    status           show model/auth status"
 	@echo "    health           health check"
+	@echo "    agents-dashboard run agents dashboard (http://127.0.0.1:18790)"
+	@echo "    agents-reset     clear agents dashboard data"
 	@echo ""
 	@echo "  configuration:"
 	@echo "    configure        run onboarding wizard"
@@ -161,17 +163,33 @@ dashboard: wait-ready
 	echo "http://127.0.0.1:$${PORT}/?token=$${TOKEN}"; \
 	echo ""
 
+agents-dashboard:
+	@echo "starting agents dashboard..."
+	@echo "open http://127.0.0.1:18790 in your browser"
+	@cd dashboard && TELEMETRY_PATH=../data/logs/telemetry.jsonl npm start
+
+agents-reset:
+	@echo "resetting agents dashboard data..."
+	@rm -f data/logs/telemetry.jsonl
+	@rm -f ~/.openclaw/dashboard/events.db*
+	@echo "done. telemetry log and database cleared."
+
 devices:
 	docker compose exec openclaw-gateway node dist/index.js devices list
 
 pair:
 	@echo "approving all pending device requests..."
-	@docker compose exec openclaw-gateway sh -c 'node dist/index.js devices list --json 2>/dev/null | \
-		node -e "const d=JSON.parse(require(\"fs\").readFileSync(0,\"utf8\")); \
-		(d.pending||[]).forEach(p=>console.log(p.requestId))"' | \
-		while read id; do \
-			[ -n "$$id" ] && docker compose exec openclaw-gateway node dist/index.js devices approve "$$id" 2>/dev/null; \
-		done
+	@docker compose exec openclaw-gateway sh -c '\
+		ids=$$(node dist/index.js devices list --json 2>/dev/null | \
+			node -e "const d=JSON.parse(require(\"fs\").readFileSync(0,\"utf8\")); \
+			(d.pending||[]).forEach(p=>console.log(p.requestId))"); \
+		if [ -z "$$ids" ]; then \
+			echo "no pending requests"; \
+		else \
+			echo "$$ids" | while read id; do \
+				[ -n "$$id" ] && node dist/index.js devices approve "$$id"; \
+			done; \
+		fi'
 	@echo "done. refresh your browser."
 
 audit:

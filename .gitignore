@@ -28,3 +28,9 @@ Thumbs.db
 .docker/
 
 !AGENTS.md
+
+node_modules
+# openclaw telemetry data
+data/extensions/
+data/logs/
+data/config.json

@@ -40,15 +40,80 @@ fi
 # create directories with secure permissions
 echo "creating directories..."
 mkdir -p data
+mkdir -p data/logs
+mkdir -p data/extensions
 mkdir -p workspaces/default
 chmod 700 data
+chmod 700 data/logs
+chmod 700 data/extensions
 chmod 700 workspaces
+
+# initialize git submodules (for openclaw-telemetry)
+if [ -f ".gitmodules" ]; then
+    echo "initializing submodules..."
+    git submodule update --init --recursive 2>/dev/null || true
+fi
 
 # copy workspace templates if default workspace is empty
 if [ -d "templates/workspace" ] && [ -z "$(ls -A workspaces/default 2>/dev/null)" ]; then
     echo "copying workspace templates..."
     cp -r templates/workspace/* workspaces/default/
     echo "workspace templates copied - customize these files for your agent"
+fi
+
+# install telemetry plugin (opt-out with OPENCLAW_TELEMETRY=false)
+if [ "${OPENCLAW_TELEMETRY:-true}" != "false" ]; then
+    if [ -d "openclaw-telemetry" ] && [ ! -f "data/extensions/telemetry/openclaw.plugin.json" ]; then
+        echo "installing telemetry plugin..."
+        rm -rf data/extensions/telemetry 2>/dev/null || true
+        cp -r openclaw-telemetry data/extensions/telemetry
+        rm -rf data/extensions/telemetry/.git 2>/dev/null || true
+
+        # apply config path fix (upstream bug: plugin looks for config in wrong location)
+        if [ -f "patches/telemetry-config.patch" ]; then
+            echo "applying telemetry config patch..."
+            if patch -d data/extensions/telemetry -p1 < patches/telemetry-config.patch; then
+                echo "telemetry plugin patched"
+            else
+                echo "warning: patch failed - telemetry may not work correctly"
+                echo "         check if upstream plugin has changed"
+            fi
+        fi
+        echo "telemetry plugin installed"
+    fi
+else
+    echo "telemetry plugin skipped (OPENCLAW_TELEMETRY=false)"
+fi
+
+# configure telemetry in openclaw.json (the actual config file openclaw uses)
+if [ "${OPENCLAW_TELEMETRY:-true}" != "false" ] && [ -d "data/extensions/telemetry" ]; then
+    if [ ! -f "data/openclaw.json" ]; then
+        # create new config with telemetry enabled
+        echo "creating openclaw.json with telemetry enabled..."
+        cat > data/openclaw.json << 'CONFIGEOF'
+{
+  "plugins": {
+    "entries": {
+      "telemetry": {
+        "enabled": true,
+        "config": {
+          "enabled": true,
+          "redact": {
+            "enabled": true
+          }
+        }
+      }
+    }
+  }
+}
+CONFIGEOF
+        chmod 600 data/openclaw.json
+        echo "telemetry writes to data/logs/telemetry.jsonl"
+    elif ! grep -q '"telemetry"' data/openclaw.json 2>/dev/null; then
+        # openclaw.json exists but no telemetry - notify user
+        echo "note: openclaw.json exists but telemetry not configured"
+        echo "      add telemetry config manually or delete data/openclaw.json and re-run setup"
+    fi
 fi
 
 # set secure permissions on env file

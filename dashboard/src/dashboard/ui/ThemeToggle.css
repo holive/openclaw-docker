@@ -1,0 +1,73 @@
+/* theme toggle - 3-way light/dark/system selector */
+
+.theme-toggle {
+  --toggle-item-size: 28px;
+  --toggle-gap: var(--space-0);
+  --toggle-padding: var(--space-1);
+  position: relative;
+}
+
+.theme-toggle-track {
+  display: grid;
+  grid-template-columns: repeat(3, var(--toggle-item-size));
+  gap: var(--toggle-gap);
+  padding: var(--toggle-padding);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+
+.theme-toggle-indicator {
+  position: absolute;
+  top: 50%;
+  left: var(--toggle-padding);
+  width: var(--toggle-item-size);
+  height: var(--toggle-item-size);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  transform: translateY(-50%) translateX(calc(var(--theme-index, 0) * (var(--toggle-item-size) + var(--toggle-gap))));
+  transition: transform var(--duration-normal) var(--ease-out);
+  z-index: 0;
+}
+
+.theme-toggle-btn {
+  position: relative;
+  z-index: 1;
+  width: var(--toggle-item-size);
+  height: var(--toggle-item-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.theme-toggle-btn:hover {
+  color: var(--text-secondary);
+}
+
+.theme-toggle-btn.active {
+  color: var(--accent-foreground);
+}
+
+.theme-toggle-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+/* compact variant */
+.theme-toggle--compact {
+  --toggle-item-size: 24px;
+}
+
+.theme-toggle--compact .theme-toggle-btn svg {
+  width: 14px;
+  height: 14px;
+}

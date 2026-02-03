@@ -1,0 +1,70 @@
+/* panel - openclaw control card style */
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  position: relative;
+}
+
+/* variants */
+.panel--raised {
+  background: var(--bg-elevated);
+  border-color: var(--border-color-strong);
+  box-shadow: var(--shadow-lg);
+}
+
+.panel--inset {
+  background: var(--bg-secondary);
+  border-color: var(--border-color-subtle);
+  box-shadow: var(--panel-inset-shadow);
+}
+
+/* panel sections */
+.panel-header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-color);
+  font-family: var(--font-mono);
+  font-weight: var(--font-medium);
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.panel-content {
+  padding: var(--space-5);
+  position: relative;
+}
+
+.panel-content--no-padding {
+  padding: 0;
+}
+
+.panel-footer {
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+/* inner card highlight effect */
+.panel--highlight {
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 var(--card-highlight);
+}
+
+/* hover state with stronger border */
+.panel--interactive {
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.panel--interactive:hover {
+  border-color: var(--border-color-strong);
+  box-shadow:
+    var(--shadow-lg),
+    inset 0 1px 0 var(--card-highlight);
+}

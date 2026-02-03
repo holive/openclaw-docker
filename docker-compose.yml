@@ -55,6 +55,19 @@ services:
       retries: 3
       start_period: 10s
 
+  crabwalk:
+    image: ghcr.io/luccast/crabwalk:latest
+    container_name: crabwalk
+    ports:
+      - "3000:3000"
+    environment:
+      CLAWDBOT_URL: ws://openclaw-gateway:18789
+      CLAWDBOT_API_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+    depends_on:
+      openclaw-gateway:
+        condition: service_healthy
+    restart: unless-stopped
+
   openclaw-cli:
     build:
       context: .
