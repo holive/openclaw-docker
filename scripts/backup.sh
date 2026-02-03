@@ -24,7 +24,7 @@ DIRS_TO_BACKUP=""
 [ -d "data" ] && DIRS_TO_BACKUP="$DIRS_TO_BACKUP data"
 [ -d "workspaces" ] && DIRS_TO_BACKUP="$DIRS_TO_BACKUP workspaces"
 
-tar -czf "backups/${BACKUP_FILE}" $DIRS_TO_BACKUP
+tar -czf "backups/${BACKUP_FILE}" "$DIRS_TO_BACKUP"
 
 # show backup info
 SIZE=$(du -h "backups/${BACKUP_FILE}" | cut -f1)

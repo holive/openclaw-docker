@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-scripts:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: run shellcheck
+        run: |
+          shellcheck scripts/*.sh start-openclaw.sh user-setup.sh
+
+  validate-compose:
+    name: validate compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup environment
+        run: |
+          cp .env.example .env
+          echo "OPENCLAW_GATEWAY_TOKEN=ci-test-token" >> .env
+          mkdir -p workspaces/default data
+      - name: validate
+        run: make validate
+
+  smoke-test:
+    name: container smoke test
+    runs-on: ubuntu-latest
+    needs: [lint-scripts, validate-compose]
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup environment
+        run: |
+          cp .env.example .env
+          echo "OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)" >> .env
+          mkdir -p workspaces/default data
+          cp -r templates/workspace/* workspaces/default/
+      - name: build
+        run: docker compose build
+      - name: start
+        run: docker compose up -d
+      - name: wait for healthy
+        run: make wait-ready
+      - name: verify health
+        run: make health
+      - name: verify files exist
+        run: |
+          docker compose exec -T openclaw-gateway test -f /start-openclaw.sh
+          docker compose exec -T openclaw-gateway test -d /home/node/.openclaw
+          docker compose exec -T openclaw-gateway test -f /home/node/.openclaw/openclaw.json
+      - name: logs on failure
+        if: failure()
+        run: docker compose logs
+      - name: cleanup
+        if: always()
+        run: docker compose down -v

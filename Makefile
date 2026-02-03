@@ -1,4 +1,4 @@
-.PHONY: quickstart setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate ps help
+.PHONY: quickstart setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate ps help test test-quick
 
 # default workspace
 WORKSPACE ?= default
@@ -46,6 +46,10 @@ help:
 	@echo ""
 	@echo "  utilities:"
 	@echo "    ps               show running containers"
+	@echo ""
+	@echo "  testing:"
+	@echo "    test             run full test suite"
+	@echo "    test-quick       infrastructure tests only (no container)"
 	@echo ""
 
 # === quick start ===
@@ -247,3 +251,13 @@ ps:
 	@echo ""
 	@echo "resource usage:"
 	@docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}"
+
+# === testing ===
+
+test:
+	@chmod +x scripts/test.sh
+	@./scripts/test.sh
+
+test-quick:
+	@echo "running layer 1 tests only..."
+	@SKIP_CONTAINER_TESTS=1 ./scripts/test.sh

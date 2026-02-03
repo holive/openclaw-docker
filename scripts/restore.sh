@@ -30,7 +30,7 @@ echo
 # check for existing data
 if [ -d "data" ] || [ -d "workspaces" ]; then
     echo "warning: existing data/ and/or workspaces/ will be overwritten"
-    read -p "continue? [y/N] " confirm
+    read -rp "continue? [y/N] " confirm
     if [ "$confirm" != "y" ]; then
         echo "restore cancelled"
         exit 0

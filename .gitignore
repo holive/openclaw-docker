@@ -2,6 +2,9 @@
 .env
 *.env.local
 
+# local working files
+BACKLOG.md
+
 # runtime data
 data/
 workspaces/
