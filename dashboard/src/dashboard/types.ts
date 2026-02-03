@@ -59,6 +59,59 @@ export interface HealthResponse {
   version: string;
 }
 
+// llm usage stats
+export interface LlmStats {
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCacheTokens: number;
+  totalCostUsd: number;
+  callCount: number;
+  models: string[];
+}
+
+// tool usage stats
+export interface ToolStats {
+  totalCalls: number;
+  successCount: number;
+  errorCount: number;
+  successRate: number;
+  mostUsed: { name: string; count: number }[];
+}
+
+// error summary
+export interface ErrorSummary {
+  count: number;
+  recent: { message: string; tool: string | null; timestamp: string }[];
+}
+
+// combined agent stats
+export interface AgentStats {
+  llm: LlmStats;
+  tools: ToolStats;
+  errors: ErrorSummary;
+}
+
+// api response for agent stats
+export interface AgentStatsResponse {
+  stats: AgentStats;
+}
+
+// derived status for more granular agent state
+export type DerivedStatus = 'thinking' | 'tooling' | 'executing' | 'waiting' | 'idle' | 'error' | 'stuck';
+
+// activity info for activity summary
+export interface ActivityInfo {
+  derivedStatus: DerivedStatus;
+  currentTool: string | null;
+  lastActions: { type: string; toolName: string | null; timestamp: string }[];
+  timeSinceActivity: number;
+}
+
+// api response for activity info
+export interface ActivityInfoResponse {
+  activity: ActivityInfo;
+}
+
 // session boundary marker for visual separation between sessions
 export interface SessionBoundary {
   type: 'session-boundary';

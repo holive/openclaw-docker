@@ -34,10 +34,30 @@ export function createSchema(db: Database.Database): void {
     )
   `);
 
+  // llm_events table for token tracking
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS llm_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent_id TEXT NOT NULL,
+      timestamp TEXT NOT NULL,
+      provider TEXT,
+      model TEXT,
+      input_tokens INTEGER,
+      output_tokens INTEGER,
+      cache_tokens INTEGER,
+      duration_ms INTEGER,
+      cost_usd REAL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (agent_id) REFERENCES agents(id)
+    )
+  `);
+
   // indexes for common queries
   db.exec(`CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_agents_started_at ON agents(started_at)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_events_agent_id ON events(agent_id)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_events_type ON events(type)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_llm_events_agent_id ON llm_events(agent_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_llm_events_timestamp ON llm_events(timestamp)`);
 }

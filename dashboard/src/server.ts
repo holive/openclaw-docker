@@ -136,6 +136,29 @@ export async function buildServer(): Promise<FastifyInstance> {
     };
   });
 
+  // get stats for agent (llm usage, tool stats, errors)
+  server.get<{ Params: { id: string } }>('/api/agents/:id/stats', async (request, reply) => {
+    const agent = eventStore.getAgent(request.params.id);
+    if (!agent) {
+      reply.code(404);
+      return { error: 'Agent not found', code: 'AGENT_NOT_FOUND' };
+    }
+
+    const stats = eventStore.getAgentStats(request.params.id);
+    return { stats };
+  });
+
+  // get activity info for agent (derived status, current tool, recent actions)
+  server.get<{ Params: { id: string } }>('/api/agents/:id/activity', async (request, reply) => {
+    const activity = eventStore.getActivityInfo(request.params.id);
+    if (!activity) {
+      reply.code(404);
+      return { error: 'Agent not found', code: 'AGENT_NOT_FOUND' };
+    }
+
+    return { activity };
+  });
+
   // serve static dashboard files if built
   const dashboardDist = join(process.cwd(), 'dist', 'dashboard');
   if (existsSync(dashboardDist)) {

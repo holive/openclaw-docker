@@ -129,6 +129,37 @@
   margin: 0;
 }
 
+.agent-detail-tabs {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.agent-detail-tab {
+  padding: var(--space-1) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.agent-detail-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.agent-detail-tab--active {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border-color: var(--border-color-subtle);
+}
+
 .agent-detail-events-error {
   padding: var(--space-3);
   margin-bottom: var(--space-3);
@@ -162,4 +193,86 @@
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--accent-danger);
+}
+
+/* stats section */
+.agent-detail-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.agent-detail-stats-section {
+  padding: var(--space-4);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color-subtle);
+  border-radius: var(--radius-md);
+}
+
+.agent-detail-stats-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 var(--space-3) 0;
+}
+
+.agent-detail-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: var(--space-3);
+}
+
+.agent-detail-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.agent-detail-stat-value {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+}
+
+.agent-detail-stat-value--success {
+  color: var(--accent-success);
+}
+
+.agent-detail-stat-value--error {
+  color: var(--accent-danger);
+}
+
+.agent-detail-stat-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.agent-detail-stats-models,
+.agent-detail-stats-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-color-subtle);
+}
+
+.agent-detail-stats-tools-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }

@@ -1,0 +1,159 @@
+/* exec history component - bash command visibility */
+
+.exec-history {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.exec-history--loading,
+.exec-history--error,
+.exec-history--empty {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--muted);
+}
+
+.exec-history--error {
+  color: var(--accent-danger);
+}
+
+.exec-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.exec-command {
+  border: 1px solid var(--border-color-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.exec-command--expanded {
+  border-color: var(--border-color);
+}
+
+.exec-command--running {
+  border-color: var(--accent-warning);
+  background: rgba(234, 179, 8, 0.05);
+}
+
+.exec-command-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-tertiary);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  transition: background var(--transition-fast);
+}
+
+.exec-command-summary:hover {
+  background: var(--bg-secondary);
+}
+
+.exec-command-prompt {
+  color: var(--accent-success);
+  font-weight: var(--font-bold);
+  flex-shrink: 0;
+}
+
+.exec-command-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exec-command-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.exec-command-exit {
+  font-weight: var(--font-semibold);
+  font-size: 11px;
+}
+
+.exec-command-exit--success {
+  color: var(--accent-success);
+}
+
+.exec-command-exit--error {
+  color: var(--accent-danger);
+}
+
+.exec-command-duration {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.exec-command-details {
+  padding: var(--space-3);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color-subtle);
+}
+
+.exec-command-detail-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.exec-command-detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.exec-command-detail-row--full,
+.exec-command-detail-row--error {
+  flex-direction: column;
+}
+
+.exec-command-detail-label {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.exec-command-detail-value {
+  color: var(--text-primary);
+}
+
+.exec-command-full {
+  margin: var(--space-1) 0 0 0;
+  padding: var(--space-2);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.exec-command-detail-error {
+  margin-top: var(--space-1);
+  padding: var(--space-2);
+  background: var(--status-error-bg);
+  border-radius: var(--radius-sm);
+  color: var(--accent-danger);
+  font-size: 11px;
+  line-height: 1.4;
+  word-break: break-word;
+}

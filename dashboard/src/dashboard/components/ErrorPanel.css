@@ -1,0 +1,81 @@
+/* error panel component */
+
+.error-panel {
+  background: var(--status-error-bg);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.error-panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(239, 68, 68, 0.1);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.error-panel-icon {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: var(--font-bold);
+  color: var(--accent-danger);
+}
+
+.error-panel-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: var(--font-semibold);
+  color: var(--accent-danger);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.error-panel-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.error-panel-item {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.1);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.error-panel-item:last-child {
+  border-bottom: none;
+}
+
+.error-panel-item:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.error-panel-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+}
+
+.error-panel-tool {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: var(--font-semibold);
+  color: var(--accent-danger);
+}
+
+.error-panel-time {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.error-panel-message {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  word-break: break-word;
+}

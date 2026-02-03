@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
-import type { Agent } from '../types';
+import type { Agent, AgentStats } from '../types';
 import { useEvents } from '../hooks/useEvents';
-import { fetchAgent } from '../api';
+import { fetchAgent, fetchAgentStats } from '../api';
 import { StatusLight, Panel, Badge, Button } from '../ui';
 import { EventList } from './EventList';
+import { ActivitySummary } from './ActivitySummary';
+import { ToolHistory } from './ToolHistory';
+import { ErrorPanel } from './ErrorPanel';
+import { ExecHistory } from './ExecHistory';
 import './AgentDetail.css';
+
+type DetailTab = 'events' | 'tools' | 'exec';
 
 interface AgentDetailProps {
   agentId: string;
@@ -40,10 +46,31 @@ function formatDateTime(isoString: string): string {
   });
 }
 
+// format token count with k/m suffix
+function formatTokens(count: number): string {
+  if (count >= 1_000_000) {
+    return `${(count / 1_000_000).toFixed(1)}M`;
+  }
+  if (count >= 1_000) {
+    return `${(count / 1_000).toFixed(1)}k`;
+  }
+  return count.toString();
+}
+
+// format cost in USD
+function formatCost(usd: number): string {
+  if (usd === 0) return '$0.00';
+  if (usd < 0.01) return '<$0.01';
+  return `$${usd.toFixed(2)}`;
+}
+
 export function AgentDetail({ agentId, onClose }: AgentDetailProps) {
   const [agent, setAgent] = useState<(Agent & { eventCount: number }) | null>(null);
   const [agentLoading, setAgentLoading] = useState(true);
   const [agentError, setAgentError] = useState<string | null>(null);
+  const [stats, setStats] = useState<AgentStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<DetailTab>('events');
   const { events, loading: eventsLoading, error: eventsError, refresh: refreshEvents } = useEvents(agentId);
 
   // load agent details
@@ -61,6 +88,23 @@ export function AgentDetail({ agentId, onClose }: AgentDetailProps) {
       }
     }
     loadAgent();
+  }, [agentId]);
+
+  // load agent stats
+  useEffect(() => {
+    async function loadStats() {
+      setStatsLoading(true);
+      try {
+        const data = await fetchAgentStats(agentId);
+        setStats(data);
+      } catch {
+        // stats are optional, don't show error
+        setStats(null);
+      } finally {
+        setStatsLoading(false);
+      }
+    }
+    loadStats();
   }, [agentId]);
 
   // loading state
@@ -143,24 +187,143 @@ export function AgentDetail({ agentId, onClose }: AgentDetailProps) {
         </div>
       </div>
 
-      {agent.lastError && (
+      {/* activity summary for running agents */}
+      {agent.status === 'running' && (
+        <ActivitySummary agentId={agentId} />
+      )}
+
+      {/* stats section */}
+      {!statsLoading && stats && (stats.llm.callCount > 0 || stats.tools.totalCalls > 0) && (
+        <div className="agent-detail-stats">
+          {/* llm usage */}
+          {stats.llm.callCount > 0 && (
+            <div className="agent-detail-stats-section">
+              <h4 className="agent-detail-stats-title">llm usage</h4>
+              <div className="agent-detail-stats-grid">
+                <div className="agent-detail-stat">
+                  <span className="agent-detail-stat-value">{formatTokens(stats.llm.totalInputTokens)}</span>
+                  <span className="agent-detail-stat-label">input tokens</span>
+                </div>
+                <div className="agent-detail-stat">
+                  <span className="agent-detail-stat-value">{formatTokens(stats.llm.totalOutputTokens)}</span>
+                  <span className="agent-detail-stat-label">output tokens</span>
+                </div>
+                {stats.llm.totalCacheTokens > 0 && (
+                  <div className="agent-detail-stat">
+                    <span className="agent-detail-stat-value">{formatTokens(stats.llm.totalCacheTokens)}</span>
+                    <span className="agent-detail-stat-label">cached</span>
+                  </div>
+                )}
+                <div className="agent-detail-stat">
+                  <span className="agent-detail-stat-value">{formatCost(stats.llm.totalCostUsd)}</span>
+                  <span className="agent-detail-stat-label">cost</span>
+                </div>
+                <div className="agent-detail-stat">
+                  <span className="agent-detail-stat-value">{stats.llm.callCount}</span>
+                  <span className="agent-detail-stat-label">api calls</span>
+                </div>
+              </div>
+              {stats.llm.models.length > 0 && (
+                <div className="agent-detail-stats-models">
+                  {stats.llm.models.map((model) => (
+                    <Badge key={model} variant="default">{model}</Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* tool usage */}
+          {stats.tools.totalCalls > 0 && (
+            <div className="agent-detail-stats-section">
+              <h4 className="agent-detail-stats-title">tool usage</h4>
+              <div className="agent-detail-stats-grid">
+                <div className="agent-detail-stat">
+                  <span className="agent-detail-stat-value">{stats.tools.totalCalls}</span>
+                  <span className="agent-detail-stat-label">total calls</span>
+                </div>
+                <div className="agent-detail-stat">
+                  <span className="agent-detail-stat-value agent-detail-stat-value--success">{stats.tools.successCount}</span>
+                  <span className="agent-detail-stat-label">success</span>
+                </div>
+                <div className="agent-detail-stat">
+                  <span className={`agent-detail-stat-value ${stats.tools.errorCount > 0 ? 'agent-detail-stat-value--error' : ''}`}>
+                    {stats.tools.errorCount}
+                  </span>
+                  <span className="agent-detail-stat-label">errors</span>
+                </div>
+                <div className="agent-detail-stat">
+                  <span className="agent-detail-stat-value">{(stats.tools.successRate * 100).toFixed(0)}%</span>
+                  <span className="agent-detail-stat-label">success rate</span>
+                </div>
+              </div>
+              {stats.tools.mostUsed.length > 0 && (
+                <div className="agent-detail-stats-tools">
+                  <span className="agent-detail-stats-tools-label">most used:</span>
+                  {stats.tools.mostUsed.slice(0, 3).map((tool) => (
+                    <Badge key={tool.name} variant="default">
+                      {tool.name} ({tool.count})
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* error panel (replaces simple last-error when stats are loaded) */}
+      {!statsLoading && stats && stats.errors.count > 0 ? (
+        <ErrorPanel errors={stats.errors} />
+      ) : agent.lastError ? (
         <div className="agent-detail-last-error">
           <span className="agent-detail-error-label">last error:</span>
           <span className="agent-detail-error-text">{agent.lastError}</span>
         </div>
-      )}
+      ) : null}
 
       <div className="agent-detail-events">
         <div className="agent-detail-events-header">
-          <h3 className="agent-detail-events-title">events</h3>
-          <Button size="sm" variant="ghost" onClick={refreshEvents} disabled={eventsLoading}>
-            {eventsLoading ? 'loading...' : 'refresh'}
-          </Button>
+          <div className="agent-detail-tabs">
+            <button
+              className={`agent-detail-tab ${activeTab === 'events' ? 'agent-detail-tab--active' : ''}`}
+              onClick={() => setActiveTab('events')}
+            >
+              events
+            </button>
+            <button
+              className={`agent-detail-tab ${activeTab === 'tools' ? 'agent-detail-tab--active' : ''}`}
+              onClick={() => setActiveTab('tools')}
+            >
+              tools
+            </button>
+            <button
+              className={`agent-detail-tab ${activeTab === 'exec' ? 'agent-detail-tab--active' : ''}`}
+              onClick={() => setActiveTab('exec')}
+            >
+              exec
+            </button>
+          </div>
+          {activeTab === 'events' && (
+            <Button size="sm" variant="ghost" onClick={refreshEvents} disabled={eventsLoading}>
+              {eventsLoading ? 'loading...' : 'refresh'}
+            </Button>
+          )}
         </div>
-        {eventsError && (
-          <div className="agent-detail-events-error">{eventsError}</div>
+        {activeTab === 'events' && (
+          <>
+            {eventsError && (
+              <div className="agent-detail-events-error">{eventsError}</div>
+            )}
+            <EventList events={events} loading={eventsLoading} />
+          </>
         )}
-        <EventList events={events} loading={eventsLoading} />
+        {activeTab === 'tools' && (
+          <ToolHistory agentId={agentId} />
+        )}
+        {activeTab === 'exec' && (
+          <ExecHistory agentId={agentId} />
+        )}
       </div>
     </Panel>
   );

@@ -5,6 +5,17 @@ import { config } from '../config.js';
 // agent status types
 export type AgentStatus = 'running' | 'completed' | 'error';
 
+// derived status for more granular agent state
+export type DerivedStatus = 'thinking' | 'tooling' | 'executing' | 'waiting' | 'idle' | 'error' | 'stuck';
+
+// activity info for activity summary
+export interface ActivityInfo {
+  derivedStatus: DerivedStatus;
+  currentTool: string | null;
+  lastActions: { type: string; toolName: string | null; timestamp: string }[];
+  timeSinceActivity: number; // milliseconds
+}
+
 // agent record from database
 export interface AgentRow {
   id: string;
@@ -30,6 +41,21 @@ export interface EventRow {
   success: number | null;
   error_message: string | null;
   raw_json: string | null;
+  created_at: string;
+}
+
+// llm event record from database
+export interface LlmEventRow {
+  id: number;
+  agent_id: string;
+  timestamp: string;
+  provider: string | null;
+  model: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  cache_tokens: number | null;
+  duration_ms: number | null;
+  cost_usd: number | null;
   created_at: string;
 }
 
@@ -69,6 +95,38 @@ export interface DbStats {
   eventCount: number;
   runningAgents: number;
   stuckAgents: number;
+}
+
+// llm usage stats for an agent
+export interface LlmStats {
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCacheTokens: number;
+  totalCostUsd: number;
+  callCount: number;
+  models: string[];
+}
+
+// tool usage stats
+export interface ToolStats {
+  totalCalls: number;
+  successCount: number;
+  errorCount: number;
+  successRate: number;
+  mostUsed: { name: string; count: number }[];
+}
+
+// error summary
+export interface ErrorSummary {
+  count: number;
+  recent: { message: string; tool: string | null; timestamp: string }[];
+}
+
+// combined agent stats
+export interface AgentStats {
+  llm: LlmStats;
+  tools: ToolStats;
+  errors: ErrorSummary;
 }
 
 // data for upserting an agent
@@ -208,6 +266,106 @@ export class EventStore {
       SELECT COUNT(*) as count FROM agents
       WHERE status = 'running'
       AND datetime(last_activity_at) < datetime('now', '-5 minutes')
+    `));
+
+    // insert llm event
+    this.stmts.set('insertLlmEvent', this.db.prepare(`
+      INSERT INTO llm_events (agent_id, timestamp, provider, model, input_tokens, output_tokens, cache_tokens, duration_ms, cost_usd)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `));
+
+    // get llm stats for agent
+    this.stmts.set('getLlmStats', this.db.prepare(`
+      SELECT
+        COALESCE(SUM(input_tokens), 0) as total_input_tokens,
+        COALESCE(SUM(output_tokens), 0) as total_output_tokens,
+        COALESCE(SUM(cache_tokens), 0) as total_cache_tokens,
+        COALESCE(SUM(cost_usd), 0) as total_cost_usd,
+        COUNT(*) as call_count
+      FROM llm_events
+      WHERE agent_id = ?
+    `));
+
+    // get distinct models for agent
+    this.stmts.set('getLlmModels', this.db.prepare(`
+      SELECT DISTINCT model FROM llm_events
+      WHERE agent_id = ? AND model IS NOT NULL
+    `));
+
+    // get tool stats for agent
+    this.stmts.set('getToolStats', this.db.prepare(`
+      SELECT
+        COUNT(*) as total_calls,
+        SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as success_count,
+        SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as error_count
+      FROM events
+      WHERE agent_id = ? AND type = 'tool.end'
+    `));
+
+    // get most used tools for agent
+    this.stmts.set('getMostUsedTools', this.db.prepare(`
+      SELECT tool_name as name, COUNT(*) as count
+      FROM events
+      WHERE agent_id = ? AND type = 'tool.end' AND tool_name IS NOT NULL
+      GROUP BY tool_name
+      ORDER BY count DESC
+      LIMIT 5
+    `));
+
+    // get recent errors for agent
+    this.stmts.set('getRecentErrors', this.db.prepare(`
+      SELECT error_message as message, tool_name as tool, timestamp
+      FROM events
+      WHERE agent_id = ? AND success = 0 AND error_message IS NOT NULL
+      ORDER BY timestamp DESC
+      LIMIT ?
+    `));
+
+    // count errors for agent
+    this.stmts.set('countErrors', this.db.prepare(`
+      SELECT COUNT(*) as count
+      FROM events
+      WHERE agent_id = ? AND success = 0
+    `));
+
+    // prune old llm events
+    this.stmts.set('pruneLlmEvents', this.db.prepare(`
+      DELETE FROM llm_events
+      WHERE datetime(timestamp) < datetime('now', ? || ' hours')
+    `));
+
+    // get recent events for activity info (last 20 events)
+    this.stmts.set('getRecentEventsForActivity', this.db.prepare(`
+      SELECT type, tool_name, timestamp
+      FROM events
+      WHERE agent_id = ?
+      ORDER BY timestamp DESC
+      LIMIT 20
+    `));
+
+    // get most recent llm event timestamp
+    this.stmts.set('getLastLlmEvent', this.db.prepare(`
+      SELECT timestamp FROM llm_events
+      WHERE agent_id = ?
+      ORDER BY timestamp DESC
+      LIMIT 1
+    `));
+
+    // check for open tool (tool.start without matching tool.end)
+    // this query finds tool.start events where the tool_name doesn't have a subsequent tool.end
+    this.stmts.set('getOpenTool', this.db.prepare(`
+      SELECT e1.tool_name, e1.timestamp
+      FROM events e1
+      WHERE e1.agent_id = ? AND e1.type = 'tool.start'
+      AND NOT EXISTS (
+        SELECT 1 FROM events e2
+        WHERE e2.agent_id = e1.agent_id
+        AND e2.type = 'tool.end'
+        AND e2.tool_name = e1.tool_name
+        AND e2.timestamp > e1.timestamp
+      )
+      ORDER BY e1.timestamp DESC
+      LIMIT 1
     `));
   }
 
@@ -390,17 +548,20 @@ export class EventStore {
     stmt.run(errorMessage, agentId);
   }
 
-  // prune old data (events and completed agents)
+  // prune old data (events, llm events, and completed agents)
   pruneOldData(olderThanHours: number = config.retentionHours): number {
     const hoursStr = `-${olderThanHours}`;
 
     const pruneEvents = this.stmts.get('pruneEvents')!;
     const eventResult = pruneEvents.run(hoursStr);
 
+    const pruneLlm = this.stmts.get('pruneLlmEvents')!;
+    const llmResult = pruneLlm.run(hoursStr);
+
     const pruneAgents = this.stmts.get('pruneAgents')!;
     const agentResult = pruneAgents.run(hoursStr);
 
-    return (eventResult.changes ?? 0) + (agentResult.changes ?? 0);
+    return (eventResult.changes ?? 0) + (llmResult.changes ?? 0) + (agentResult.changes ?? 0);
   }
 
   // get database statistics
@@ -415,6 +576,173 @@ export class EventStore {
       eventCount: countEvents.count,
       runningAgents: countRunning.count,
       stuckAgents: countStuck.count,
+    };
+  }
+
+  // store an llm usage event
+  storeLlmEvent(
+    agentId: string,
+    timestamp: string,
+    provider: string | null,
+    model: string | null,
+    inputTokens: number | null,
+    outputTokens: number | null,
+    cacheTokens: number | null,
+    durationMs: number | null,
+    costUsd: number | null
+  ): void {
+    const stmt = this.stmts.get('insertLlmEvent')!;
+    stmt.run(agentId, timestamp, provider, model, inputTokens, outputTokens, cacheTokens, durationMs, costUsd);
+  }
+
+  // get llm usage stats for an agent
+  getLlmStats(agentId: string): LlmStats {
+    const statsStmt = this.stmts.get('getLlmStats')!;
+    const stats = statsStmt.get(agentId) as {
+      total_input_tokens: number;
+      total_output_tokens: number;
+      total_cache_tokens: number;
+      total_cost_usd: number;
+      call_count: number;
+    };
+
+    const modelsStmt = this.stmts.get('getLlmModels')!;
+    const modelRows = modelsStmt.all(agentId) as { model: string }[];
+    const models = modelRows.map(row => row.model);
+
+    return {
+      totalInputTokens: stats.total_input_tokens,
+      totalOutputTokens: stats.total_output_tokens,
+      totalCacheTokens: stats.total_cache_tokens,
+      totalCostUsd: stats.total_cost_usd,
+      callCount: stats.call_count,
+      models,
+    };
+  }
+
+  // get tool usage stats for an agent
+  getToolStats(agentId: string): ToolStats {
+    const statsStmt = this.stmts.get('getToolStats')!;
+    const stats = statsStmt.get(agentId) as {
+      total_calls: number;
+      success_count: number;
+      error_count: number;
+    };
+
+    const mostUsedStmt = this.stmts.get('getMostUsedTools')!;
+    const mostUsed = mostUsedStmt.all(agentId) as { name: string; count: number }[];
+
+    const totalCalls = stats.total_calls || 0;
+    const successCount = stats.success_count || 0;
+
+    return {
+      totalCalls,
+      successCount,
+      errorCount: stats.error_count || 0,
+      successRate: totalCalls > 0 ? successCount / totalCalls : 0,
+      mostUsed,
+    };
+  }
+
+  // get error summary for an agent
+  getErrorSummary(agentId: string, limit: number = 5): ErrorSummary {
+    const countStmt = this.stmts.get('countErrors')!;
+    const countResult = countStmt.get(agentId) as { count: number };
+
+    const recentStmt = this.stmts.get('getRecentErrors')!;
+    const recent = recentStmt.all(agentId, limit) as { message: string; tool: string | null; timestamp: string }[];
+
+    return {
+      count: countResult.count,
+      recent,
+    };
+  }
+
+  // get combined agent stats
+  getAgentStats(agentId: string): AgentStats {
+    return {
+      llm: this.getLlmStats(agentId),
+      tools: this.getToolStats(agentId),
+      errors: this.getErrorSummary(agentId),
+    };
+  }
+
+  // prune old llm events (called during regular pruning)
+  pruneLlmEvents(olderThanHours: number = config.retentionHours): number {
+    const hoursStr = `-${olderThanHours}`;
+    const stmt = this.stmts.get('pruneLlmEvents')!;
+    const result = stmt.run(hoursStr);
+    return result.changes ?? 0;
+  }
+
+  // get activity info for an agent (derived status, current tool, last actions)
+  getActivityInfo(agentId: string): ActivityInfo | null {
+    const agent = this.getAgent(agentId);
+    if (!agent) return null;
+
+    const now = Date.now();
+    const lastActivityMs = new Date(agent.lastActivityAt).getTime();
+    const timeSinceActivity = now - lastActivityMs;
+
+    // get recent events for last actions
+    const recentEventsStmt = this.stmts.get('getRecentEventsForActivity')!;
+    const recentEvents = recentEventsStmt.all(agentId) as { type: string; tool_name: string | null; timestamp: string }[];
+
+    const lastActions = recentEvents.slice(0, 3).map(e => ({
+      type: e.type,
+      toolName: e.tool_name,
+      timestamp: e.timestamp,
+    }));
+
+    // determine derived status
+    let derivedStatus: DerivedStatus;
+    let currentTool: string | null = null;
+
+    // if agent has ended
+    if (agent.status === 'completed') {
+      derivedStatus = 'idle';
+    } else if (agent.status === 'error') {
+      derivedStatus = 'error';
+    } else if (agent.isStuck) {
+      derivedStatus = 'stuck';
+    } else {
+      // agent is running, check for open tools
+      const openToolStmt = this.stmts.get('getOpenTool')!;
+      const openTool = openToolStmt.get(agentId) as { tool_name: string; timestamp: string } | undefined;
+
+      if (openTool) {
+        currentTool = openTool.tool_name;
+        // bash tool means executing
+        if (openTool.tool_name === 'Bash' || openTool.tool_name === 'bash') {
+          derivedStatus = 'executing';
+        } else {
+          derivedStatus = 'tooling';
+        }
+      } else {
+        // no open tool, check for recent llm activity
+        const llmStmt = this.stmts.get('getLastLlmEvent')!;
+        const lastLlm = llmStmt.get(agentId) as { timestamp: string } | undefined;
+
+        if (lastLlm) {
+          const llmTime = new Date(lastLlm.timestamp).getTime();
+          const timeSinceLlm = now - llmTime;
+          // if llm event within last 30 seconds and more recent than last regular event
+          if (timeSinceLlm < 30000) {
+            derivedStatus = 'thinking';
+          } else {
+            derivedStatus = 'waiting';
+          }
+        } else {
+          derivedStatus = 'waiting';
+        }
+      }
+    }
+
+    return {
+      derivedStatus,
+      currentTool,
+      lastActions,
+      timeSinceActivity,
     };
   }
 }

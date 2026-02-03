@@ -1,4 +1,4 @@
-import type { Agent, Event, AgentsResponse, AgentResponse, EventsResponse, HealthResponse } from './types';
+import type { Agent, Event, AgentsResponse, AgentResponse, EventsResponse, HealthResponse, AgentStats, AgentStatsResponse, ActivityInfo, ActivityInfoResponse } from './types';
 
 const API_BASE = '/api';
 
@@ -37,4 +37,18 @@ export async function fetchEvents(agentId: string, limit?: number): Promise<Even
 export async function checkHealth(): Promise<HealthResponse> {
   const response = await fetch(`${API_BASE}/health`);
   return handleResponse<HealthResponse>(response);
+}
+
+// fetch stats for a specific agent (llm usage, tool stats, errors)
+export async function fetchAgentStats(agentId: string): Promise<AgentStats> {
+  const response = await fetch(`${API_BASE}/agents/${encodeURIComponent(agentId)}/stats`);
+  const data = await handleResponse<AgentStatsResponse>(response);
+  return data.stats;
+}
+
+// fetch activity info for a specific agent (derived status, current tool, recent actions)
+export async function fetchActivityInfo(agentId: string): Promise<ActivityInfo> {
+  const response = await fetch(`${API_BASE}/agents/${encodeURIComponent(agentId)}/activity`);
+  const data = await handleResponse<ActivityInfoResponse>(response);
+  return data.activity;
 }

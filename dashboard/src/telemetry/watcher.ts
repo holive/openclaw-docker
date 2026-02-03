@@ -226,7 +226,19 @@ export class TelemetryWatcher {
         break;
 
       case 'llm.usage':
-        // skip llm.usage events for now (deferred to v0.2 per architecture)
+        // store llm usage event for token tracking
+        this.eventStore.updateAgentActivity(event.agentId);
+        this.eventStore.storeLlmEvent(
+          event.agentId,
+          timestamp,
+          event.provider ?? null,
+          event.model ?? null,
+          event.inputTokens ?? null,
+          event.outputTokens ?? null,
+          event.cacheTokens ?? null,
+          event.durationMs ?? null,
+          event.costUsd ?? null
+        );
         break;
     }
   }
