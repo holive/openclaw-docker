@@ -1,4 +1,4 @@
-.PHONY: quickstart setup up down restart update rebuild chat logs shell status health configure audit audit-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate ps help
+.PHONY: quickstart setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate ps help
 
 # default workspace
 WORKSPACE ?= default
@@ -50,12 +50,11 @@ help:
 
 # === quick start ===
 
-quickstart: setup up
+quickstart: setup up wait-ready
 	@chmod +x scripts/check-provider.sh
 	@if ./scripts/check-provider.sh; then \
 		echo ""; \
 		echo "starting chat..."; \
-		sleep 2; \
 		$(MAKE) chat; \
 	else \
 		echo ""; \
@@ -108,13 +107,21 @@ rebuild:
 	OPENCLAW_WORKSPACE=$(WORKSPACE) docker compose up -d
 	@echo "rebuild complete"
 
-# === operations ===
-
-chat:
+wait-ready:
 	@if ! docker compose ps --quiet openclaw-gateway 2>/dev/null | grep -q .; then \
 		echo "error: container not running. run 'make up' first."; \
 		exit 1; \
 	fi
+	@printf "waiting for gateway to be ready..."
+	@i=0; while [ $$i -lt 60 ]; do \
+		status=$$(docker compose ps openclaw-gateway --format "{{.Health}}" 2>/dev/null); \
+		if [ "$$status" = "healthy" ]; then echo " ready"; exit 0; fi; \
+		printf "."; sleep 1; i=$$((i + 1)); \
+	done; echo " timeout"; echo "error: gateway failed to become healthy"; exit 1
+
+# === operations ===
+
+chat: wait-ready
 	@echo "connecting to workspace: $(WORKSPACE)"
 	@docker compose exec openclaw-gateway sh -c 'node dist/index.js tui --token $$(node -e "console.log(require(\"/home/node/.openclaw/openclaw.json\").gateway.auth.token)")'
 
@@ -132,21 +139,13 @@ health:
 
 # === configuration ===
 
-configure:
-	@if ! docker compose ps --quiet openclaw-gateway 2>/dev/null | grep -q .; then \
-		echo "error: container not running. run 'make up' first."; \
-		exit 1; \
-	fi
+configure: wait-ready
 	docker compose exec openclaw-gateway node dist/index.js onboard
 
 # alias for configure (mentioned in some docs)
 onboard: configure
 
-dashboard:
-	@if ! docker compose ps --quiet openclaw-gateway 2>/dev/null | grep -q .; then \
-		echo "error: container not running. run 'make up' first."; \
-		exit 1; \
-	fi
+dashboard: wait-ready
 	@TOKEN=$$(grep "^OPENCLAW_GATEWAY_TOKEN=" .env | cut -d'=' -f2); \
 	PORT=$$(grep "^OPENCLAW_GATEWAY_PORT=" .env | cut -d'=' -f2); \
 	PORT=$${PORT:-18789}; \
