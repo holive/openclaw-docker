@@ -75,6 +75,6 @@ merge_config
 
 # start openclaw gateway
 exec node dist/index.js gateway \
-    --bind "${OPENCLAW_GATEWAY_BIND:-loopback}" \
+    --bind "${OPENCLAW_GATEWAY_BIND:-lan}" \
     --port "${OPENCLAW_GATEWAY_PORT:-18789}" \
     --allow-unconfigured

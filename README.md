@@ -136,6 +136,7 @@ See [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for more options.
 ## Documentation
 
 - [PROVIDERS.md](docs/PROVIDERS.md) - AI provider options (free and paid)
+- [DASHBOARD.md](docs/DASHBOARD.md) - Browser-based Control UI
 - [SECURITY.md](docs/SECURITY.md) - What Docker protects and doesn't
 - [SKILLS.md](docs/SKILLS.md) - Installing additional skills
 - [WORKSPACES.md](docs/WORKSPACES.md) - Multi-workspace guide

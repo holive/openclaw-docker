@@ -142,6 +142,32 @@ configure:
 # alias for configure (mentioned in some docs)
 onboard: configure
 
+dashboard:
+	@if ! docker compose ps --quiet openclaw-gateway 2>/dev/null | grep -q .; then \
+		echo "error: container not running. run 'make up' first."; \
+		exit 1; \
+	fi
+	@TOKEN=$$(grep "^OPENCLAW_GATEWAY_TOKEN=" .env | cut -d'=' -f2); \
+	PORT=$$(grep "^OPENCLAW_GATEWAY_PORT=" .env | cut -d'=' -f2); \
+	PORT=$${PORT:-18789}; \
+	echo ""; \
+	echo "open in browser:"; \
+	echo "http://127.0.0.1:$${PORT}/?token=$${TOKEN}"; \
+	echo ""
+
+devices:
+	docker compose exec openclaw-gateway node dist/index.js devices list
+
+pair:
+	@echo "approving all pending device requests..."
+	@docker compose exec openclaw-gateway sh -c 'node dist/index.js devices list --json 2>/dev/null | \
+		node -e "const d=JSON.parse(require(\"fs\").readFileSync(0,\"utf8\")); \
+		(d.pending||[]).forEach(p=>console.log(p.requestId))"' | \
+		while read id; do \
+			[ -n "$$id" ] && docker compose exec openclaw-gateway node dist/index.js devices approve "$$id" 2>/dev/null; \
+		done
+	@echo "done. refresh your browser."
+
 audit:
 	docker compose exec openclaw-gateway node dist/index.js security audit --deep
 
