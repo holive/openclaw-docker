@@ -253,7 +253,11 @@ export function AgentDetail({ agentId, onClose }: AgentDetailProps) {
                   <span className="agent-detail-stat-label">errors</span>
                 </div>
                 <div className="agent-detail-stat">
-                  <span className="agent-detail-stat-value">{(stats.tools.successRate * 100).toFixed(0)}%</span>
+                  <span className="agent-detail-stat-value">
+                    {stats.tools.successRateAvailable
+                      ? `${(stats.tools.successRate! * 100).toFixed(0)}%`
+                      : 'n/a'}
+                  </span>
                   <span className="agent-detail-stat-label">success rate</span>
                 </div>
               </div>

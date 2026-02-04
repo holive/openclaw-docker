@@ -49,8 +49,11 @@ help:
 	@echo "    workspace-new NAME=x     create new workspace"
 	@echo "    workspace-list           list workspaces"
 	@echo ""
-	@echo "  utilities:"
-	@echo "    ps               show running containers"
+	@echo "  docker/colima:"
+	@echo "    colima-start   start colima (2cpu/1.5gb/10gb)"
+	@echo "    colima-stop    stop colima"
+	@echo "    colima-status  check colima status"
+	@echo "    ps             show running containers with stats"
 	@echo ""
 	@echo "  testing:"
 	@echo "    test             run full test suite"
@@ -264,7 +267,17 @@ workspace-list:
 	@echo "available workspaces:"
 	@ls -1 workspaces 2>/dev/null || echo "  (none - run 'make setup' first)"
 
-# === utilities ===
+# === docker/colima ===
+
+colima-start:
+	@echo "starting colima (2 cpu, 1.5gb memory, 10gb disk)..."
+	colima start --cpu 2 --memory 1.5 --disk 10 --runtime docker
+
+colima-stop:
+	colima stop
+
+colima-status:
+	@colima status
 
 ps:
 	@echo "running containers:"

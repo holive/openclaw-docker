@@ -26,6 +26,10 @@ export interface Event {
   success: boolean | null;
   error: string | null;
   params: Record<string, unknown> | null;
+  derived?: {
+    durationFromNextEvent?: boolean;  // duration was derived from next event timestamp
+    successFromAgentEnd?: boolean;    // success was inferred from agent.end status
+  };
 }
 
 // api response for agents list
@@ -67,15 +71,18 @@ export interface LlmStats {
   totalCostUsd: number;
   callCount: number;
   models: string[];
+  available: boolean;  // false when llm.usage events are not available from openclaw
 }
 
 // tool usage stats
 export interface ToolStats {
-  totalCalls: number;
+  totalCalls: number;        // total tool.start events (actual tool invocations)
+  completedCalls: number;    // tool.end events (may be 0 if openclaw doesn't emit them)
   successCount: number;
   errorCount: number;
-  successRate: number;
+  successRate: number | null;  // null when no tool.end events available
   mostUsed: { name: string; count: number }[];
+  successRateAvailable: boolean;  // false when no tool.end events exist
 }
 
 // error summary

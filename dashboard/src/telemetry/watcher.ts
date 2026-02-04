@@ -173,63 +173,106 @@ export class TelemetryWatcher {
     return `${agentId} (${platform})`;
   }
 
+  // extract agentId from sessionKey if not directly available
+  // sessionKey format: agent:{agentId}:{platform}:{type}:{recipient}
+  private deriveAgentId(event: TelemetryEvent): string | null {
+    if (event.agentId) {
+      return event.agentId;
+    }
+
+    // try to extract from sessionKey
+    if (event.sessionKey) {
+      const parts = event.sessionKey.split(':');
+      if (parts.length >= 2 && parts[0] === 'agent') {
+        return parts[1];
+      }
+    }
+
+    // fallback: use 'unknown' for events we still want to track
+    return 'unknown';
+  }
+
+  // ensure agent exists in database (creates if missing)
+  // this prevents foreign key constraint errors when events arrive before agent.start
+  private ensureAgentExists(agentId: string, sessionKey: string | undefined, timestamp: string): void {
+    const existing = this.eventStore.getAgent(agentId);
+    if (!existing) {
+      this.eventStore.upsertAgent(agentId, {
+        name: this.deriveAgentName(agentId, sessionKey),
+        startedAt: timestamp,
+      });
+    }
+  }
+
   // handle a single telemetry event
   private handleEvent(event: TelemetryEvent): void {
-    // skip events without agent id
-    if (!event.agentId) {
+    // derive agentId from event or sessionKey
+    const agentId = this.deriveAgentId(event);
+    if (!agentId) {
       return;
     }
+
+    // use derived agentId for all operations
+    const eventWithAgentId = { ...event, agentId };
 
     const timestamp = new Date(event.ts).toISOString();
 
     switch (event.type) {
       case 'agent.start':
         // create or update agent with running status
-        this.eventStore.upsertAgent(event.agentId, {
-          name: this.deriveAgentName(event.agentId, event.sessionKey),
+        this.eventStore.upsertAgent(agentId, {
+          name: this.deriveAgentName(agentId, event.sessionKey),
           startedAt: timestamp,
         });
         // do not store agent.start as an event per architecture spec
         break;
 
       case 'agent.end': {
+        // ensure agent exists before updating status
+        this.ensureAgentExists(agentId, event.sessionKey, timestamp);
         // update agent status based on success
         const status = event.success ? 'completed' : 'error';
-        this.eventStore.updateAgentStatus(event.agentId, status, event.error);
-        // store the event
-        this.eventStore.insertEvent(event);
+        this.eventStore.updateAgentStatus(agentId, status, event.error);
+        // store the event with derived agentId
+        this.eventStore.insertEvent(eventWithAgentId);
         break;
       }
 
       case 'tool.start':
       case 'tool.end':
+        // ensure agent exists before inserting event (prevents FK constraint error)
+        this.ensureAgentExists(agentId, event.sessionKey, timestamp);
         // update agent activity and store event
-        this.eventStore.updateAgentActivity(event.agentId);
-        this.eventStore.insertEvent(event);
+        this.eventStore.updateAgentActivity(agentId);
+        this.eventStore.insertEvent(eventWithAgentId);
 
         // if tool.end has error, increment error count
         if (event.type === 'tool.end' && !event.success && event.error) {
-          this.eventStore.incrementErrorCount(event.agentId, event.error);
+          this.eventStore.incrementErrorCount(agentId, event.error);
         }
         break;
 
       case 'message.in':
       case 'message.out':
+        // ensure agent exists before inserting event (prevents FK constraint error)
+        this.ensureAgentExists(agentId, event.sessionKey, timestamp);
         // update agent activity and store event
-        this.eventStore.updateAgentActivity(event.agentId);
-        this.eventStore.insertEvent(event);
+        this.eventStore.updateAgentActivity(agentId);
+        this.eventStore.insertEvent(eventWithAgentId);
 
         // if message.out has error, increment error count
         if (event.type === 'message.out' && !event.success && event.error) {
-          this.eventStore.incrementErrorCount(event.agentId, event.error);
+          this.eventStore.incrementErrorCount(agentId, event.error);
         }
         break;
 
       case 'llm.usage':
+        // ensure agent exists before inserting llm event (prevents FK constraint error)
+        this.ensureAgentExists(agentId, event.sessionKey, timestamp);
         // store llm usage event for token tracking
-        this.eventStore.updateAgentActivity(event.agentId);
+        this.eventStore.updateAgentActivity(agentId);
         this.eventStore.storeLlmEvent(
-          event.agentId,
+          agentId,
           timestamp,
           event.provider ?? null,
           event.model ?? null,

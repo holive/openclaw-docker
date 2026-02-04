@@ -123,7 +123,8 @@ export async function buildServer(): Promise<FastifyInstance> {
       }
     }
 
-    const events = eventStore.getEventsForAgent(request.params.id, limit);
+    // use getEventsWithDerivedData to include derived duration/success for tool.start events
+    const events = eventStore.getEventsWithDerivedData(request.params.id, limit);
     const totalCount = eventStore.getEventCountForAgent(request.params.id);
 
     return {

@@ -87,6 +87,10 @@ export interface Event {
   success: boolean | null;
   error: string | null;
   params: Record<string, unknown> | null;
+  derived?: {
+    durationFromNextEvent?: boolean;  // duration was derived from next event timestamp
+    successFromAgentEnd?: boolean;    // success was inferred from agent.end status
+  };
 }
 
 // database stats
@@ -105,15 +109,18 @@ export interface LlmStats {
   totalCostUsd: number;
   callCount: number;
   models: string[];
+  available: boolean;  // false when no llm.usage events exist (openclaw doesn't emit them yet)
 }
 
 // tool usage stats
 export interface ToolStats {
-  totalCalls: number;
+  totalCalls: number;        // total tool.start events (actual tool invocations)
+  completedCalls: number;    // tool.end events (may be 0 if openclaw doesn't emit them)
   successCount: number;
   errorCount: number;
-  successRate: number;
+  successRate: number | null;  // null when no tool.end events available
   mostUsed: { name: string; count: number }[];
+  successRateAvailable: boolean;  // false when no tool.end events exist
 }
 
 // error summary
@@ -184,6 +191,14 @@ export class EventStore {
       SELECT * FROM events
       WHERE agent_id = ?
       ORDER BY timestamp DESC
+      LIMIT ?
+    `));
+
+    // get events for agent in ascending order (for derivation processing)
+    this.stmts.set('getEventsForAgentAsc', this.db.prepare(`
+      SELECT * FROM events
+      WHERE agent_id = ?
+      ORDER BY timestamp ASC
       LIMIT ?
     `));
 
@@ -292,7 +307,7 @@ export class EventStore {
       WHERE agent_id = ? AND model IS NOT NULL
     `));
 
-    // get tool stats for agent
+    // get tool stats for agent (tool.end events for success/error tracking)
     this.stmts.set('getToolStats', this.db.prepare(`
       SELECT
         COUNT(*) as total_calls,
@@ -302,11 +317,18 @@ export class EventStore {
       WHERE agent_id = ? AND type = 'tool.end'
     `));
 
-    // get most used tools for agent
+    // count total tool invocations (tool.start events) - works even without tool.end
+    this.stmts.set('getToolStartCount', this.db.prepare(`
+      SELECT COUNT(*) as count
+      FROM events
+      WHERE agent_id = ? AND type = 'tool.start'
+    `));
+
+    // get most used tools for agent (from tool.start, since tool.end may not exist)
     this.stmts.set('getMostUsedTools', this.db.prepare(`
       SELECT tool_name as name, COUNT(*) as count
       FROM events
-      WHERE agent_id = ? AND type = 'tool.end' AND tool_name IS NOT NULL
+      WHERE agent_id = ? AND type = 'tool.start' AND tool_name IS NOT NULL
       GROUP BY tool_name
       ORDER BY count DESC
       LIMIT 5
@@ -468,6 +490,64 @@ export class EventStore {
     return rows.map(row => this.rowToEvent(row));
   }
 
+  // get events with derived data (duration and success inference for tool.start events)
+  // since openclaw doesn't emit tool.end events, we derive:
+  // - duration: from the gap between tool.start and the next event
+  // - success: from the agent.end event status (if agent succeeded, tools likely succeeded)
+  getEventsWithDerivedData(agentId: string, limit?: number): Event[] {
+    const effectiveLimit = Math.min(limit ?? config.eventLimit, config.maxEventLimit);
+
+    // get events in ascending order for processing
+    const stmtAsc = this.stmts.get('getEventsForAgentAsc')!;
+    const rowsAsc = stmtAsc.all(agentId, effectiveLimit) as EventRow[];
+    const eventsAsc = rowsAsc.map(row => this.rowToEvent(row));
+
+    // find agent.end event to determine overall success
+    const agentEndEvent = eventsAsc.find(e => e.type === 'agent.end');
+    const agentSucceeded = agentEndEvent?.success === true;
+
+    // process events to derive missing data
+    const enrichedEvents: Event[] = [];
+
+    for (let i = 0; i < eventsAsc.length; i++) {
+      const event = eventsAsc[i];
+      const nextEvent = eventsAsc[i + 1];
+
+      // check if this is a tool.start without corresponding tool.end data
+      if (event.type === 'tool.start' && event.durationMs === null) {
+        const derived: Event['derived'] = {};
+
+        // derive duration from next event timestamp
+        if (nextEvent) {
+          const currentTs = new Date(event.timestamp).getTime();
+          const nextTs = new Date(nextEvent.timestamp).getTime();
+          const derivedDuration = nextTs - currentTs;
+
+          // only use derived duration if it's positive and reasonable (< 5 minutes)
+          if (derivedDuration > 0 && derivedDuration < 300000) {
+            event.durationMs = derivedDuration;
+            derived.durationFromNextEvent = true;
+          }
+        }
+
+        // infer success from agent.end if we don't have tool.end
+        if (event.success === null && agentSucceeded !== undefined) {
+          event.success = agentSucceeded;
+          derived.successFromAgentEnd = true;
+        }
+
+        if (derived.durationFromNextEvent || derived.successFromAgentEnd) {
+          event.derived = derived;
+        }
+      }
+
+      enrichedEvents.push(event);
+    }
+
+    // return in descending order (most recent first) as expected by the UI
+    return enrichedEvents.reverse();
+  }
+
   // get total event count for an agent
   getEventCountForAgent(agentId: string): number {
     const stmt = this.stmts.get('getEventCount')!;
@@ -596,6 +676,8 @@ export class EventStore {
   }
 
   // get llm usage stats for an agent
+  // note: llm.usage events require openclaw's diagnostic event hook which isn't implemented yet
+  // when callCount is 0, we set available=false to indicate data is unavailable (not just zero)
   getLlmStats(agentId: string): LlmStats {
     const statsStmt = this.stmts.get('getLlmStats')!;
     const stats = statsStmt.get(agentId) as {
@@ -610,6 +692,9 @@ export class EventStore {
     const modelRows = modelsStmt.all(agentId) as { model: string }[];
     const models = modelRows.map(row => row.model);
 
+    // data is only available if we have at least one llm.usage event
+    const available = stats.call_count > 0;
+
     return {
       totalInputTokens: stats.total_input_tokens,
       totalOutputTokens: stats.total_output_tokens,
@@ -617,13 +702,21 @@ export class EventStore {
       totalCostUsd: stats.total_cost_usd,
       callCount: stats.call_count,
       models,
+      available,
     };
   }
 
   // get tool usage stats for an agent
+  // note: tool.end events require openclaw's after_tool_call hook which isn't implemented yet
+  // we count tool.start for total usage, and tool.end for success/error if available
   getToolStats(agentId: string): ToolStats {
-    const statsStmt = this.stmts.get('getToolStats')!;
-    const stats = statsStmt.get(agentId) as {
+    // count tool.start events (actual tool invocations)
+    const startCountStmt = this.stmts.get('getToolStartCount')!;
+    const startCount = (startCountStmt.get(agentId) as { count: number }).count || 0;
+
+    // count tool.end events (may be 0 if openclaw doesn't emit them)
+    const endStatsStmt = this.stmts.get('getToolStats')!;
+    const endStats = endStatsStmt.get(agentId) as {
       total_calls: number;
       success_count: number;
       error_count: number;
@@ -632,15 +725,22 @@ export class EventStore {
     const mostUsedStmt = this.stmts.get('getMostUsedTools')!;
     const mostUsed = mostUsedStmt.all(agentId) as { name: string; count: number }[];
 
-    const totalCalls = stats.total_calls || 0;
-    const successCount = stats.success_count || 0;
+    const completedCalls = endStats.total_calls || 0;
+    const successCount = endStats.success_count || 0;
+    const errorCount = endStats.error_count || 0;
+
+    // success rate is only available if we have tool.end events
+    const successRateAvailable = completedCalls > 0;
+    const successRate = successRateAvailable ? successCount / completedCalls : null;
 
     return {
-      totalCalls,
+      totalCalls: startCount,
+      completedCalls,
       successCount,
-      errorCount: stats.error_count || 0,
-      successRate: totalCalls > 0 ? successCount / totalCalls : 0,
+      errorCount,
+      successRate,
       mostUsed,
+      successRateAvailable,
     };
   }
 
