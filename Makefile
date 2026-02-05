@@ -1,4 +1,4 @@
-.PHONY: quickstart setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps help test test-quick test-validate-env
+.PHONY: quickstart setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps help test test-quick test-validate-env infra-init infra-plan infra-apply infra-destroy infra-output
 
 # default workspace
 WORKSPACE ?= default
@@ -54,6 +54,13 @@ help:
 	@echo "  testing:"
 	@echo "    test             run full test suite"
 	@echo "    test-quick       infrastructure tests only (no container)"
+	@echo ""
+	@echo "  infrastructure (hetzner):"
+	@echo "    infra-init       initialize opentofu"
+	@echo "    infra-plan       preview infrastructure changes"
+	@echo "    infra-apply      create/update infrastructure"
+	@echo "    infra-destroy    tear down infrastructure"
+	@echo "    infra-output     show infrastructure outputs"
 	@echo ""
 
 # === quick start ===
@@ -290,3 +297,27 @@ test-quick:
 test-validate-env:
 	@chmod +x scripts/test-validate-env.sh
 	@./scripts/test-validate-env.sh
+
+# === infrastructure ===
+
+INFRA_DIR := infra/hetzner
+TOFU := tofu
+
+infra-init:
+	@echo "initializing opentofu..."
+	cd $(INFRA_DIR) && $(TOFU) init
+
+infra-plan:
+	@echo "planning infrastructure changes..."
+	cd $(INFRA_DIR) && $(TOFU) plan
+
+infra-apply:
+	@echo "applying infrastructure..."
+	cd $(INFRA_DIR) && $(TOFU) apply
+
+infra-destroy:
+	@echo "destroying infrastructure..."
+	cd $(INFRA_DIR) && $(TOFU) destroy
+
+infra-output:
+	@cd $(INFRA_DIR) && $(TOFU) output

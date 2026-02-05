@@ -33,57 +33,18 @@ make chat         # interactive TUI
 
 ## Configuration
 
-All config via `.env`:
+Copy `.env.example` to `.env`. Key settings:
+- AI provider keys (or use `make configure` for free options)
+- Gateway token (auto-generated)
 
-```bash
-# ai providers (all optional - see docs/PROVIDERS.md)
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=
-OPENAI_BASE_URL=
-
-# gateway (auto-configured)
-OPENCLAW_GATEWAY_TOKEN=     # auto-generated on setup
-OPENCLAW_GATEWAY_PORT=18789
-OPENCLAW_GATEWAY_BIND=loopback
-
-# optional channels
-TELEGRAM_BOT_TOKEN=
-DISCORD_BOT_TOKEN=
-SLACK_BOT_TOKEN=
-SLACK_APP_TOKEN=
-```
-
-See [docs/PROVIDERS.md](docs/PROVIDERS.md) for available AI providers including free options.
+See [docs/PROVIDERS.md](docs/PROVIDERS.md) for all options.
 
 ## Commands
 
 ```bash
-# lifecycle
-make up             # start gateway
-make down           # stop gateway
-make restart        # restart
-make update         # pull latest and rebuild
-
-# operations
-make chat           # interactive TUI
-make logs           # follow logs
-make shell          # debug shell
-make status         # show status
-
-# workspaces
-make chat WORKSPACE=work       # use different workspace
-make workspace-new NAME=work   # create new workspace
-make workspace-list            # list workspaces
-
-# skills
-make skill-install SKILL=x     # install npm skill
-make skill-list                # list installed
-make skill-remove SKILL=x      # remove skill
-
-# data
-make backup         # export data + workspaces
-make restore FILE=x # restore from backup
-make clean          # wipe everything
+make quickstart   # first-time setup + start
+make chat         # interactive TUI
+make help         # show all commands
 ```
 
 ## Security
@@ -114,24 +75,11 @@ See [docs/WORKSPACES.md](docs/WORKSPACES.md) for the multi-workspace guide.
 
 ## Customization
 
-Add system packages:
-```bash
-docker compose build --build-arg EXTRA_APT_PACKAGES="ffmpeg imagemagick"
-```
+See [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for adding packages, toolchains, and browser automation.
 
-Add custom toolchains by editing `user-setup.sh`:
-```bash
-# example: install rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-```
+## Deployment
 
-Enable browser automation:
-```bash
-# in .env
-OPENCLAW_BROWSER=true
-```
-
-See [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for more options.
+Deploy to Hetzner Cloud with OpenTofu: see [infra/hetzner/](infra/hetzner/)
 
 ## Documentation
 

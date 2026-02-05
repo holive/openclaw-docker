@@ -1,0 +1,25 @@
+# opentofu/terraform state
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# secrets - never commit
+*.tfvars
+!terraform.tfvars.example
+
+# crash logs
+crash.log
+crash.*.log
+
+# override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# editor/ide
+.idea/
+*.swp
+*.swo
+*~

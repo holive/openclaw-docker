@@ -1,0 +1,13 @@
+# copy to terraform.tfvars and fill in values
+# DO NOT commit terraform.tfvars to git
+
+# required
+hcloud_token      = ""  # https://console.hetzner.cloud/projects/*/security/tokens
+tailscale_authkey = ""  # https://login.tailscale.com/admin/settings/keys
+ssh_public_key    = ""  # cat ~/.ssh/id_ed25519.pub
+
+# optional overrides
+# server_name = "openclaw"
+# server_type = "cax21"       # cax11 (2vcpu/4gb), cax21 (4vcpu/8gb), cax31 (8vcpu/16gb)
+# location    = "fsn1"        # fsn1, nbg1, hel1, ash, hil
+# image       = "ubuntu-24.04"
