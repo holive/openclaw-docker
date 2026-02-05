@@ -1,4 +1,4 @@
-.PHONY: quickstart setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate ps help test test-quick agents-dashboard agents-reset
+.PHONY: quickstart setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps help test test-quick test-validate-env
 
 # default workspace
 WORKSPACE ?= default
@@ -26,14 +26,13 @@ help:
 	@echo "    shell            debug shell access"
 	@echo "    status           show model/auth status"
 	@echo "    health           health check"
-	@echo "    agents-dashboard run agents dashboard (http://127.0.0.1:18790)"
-	@echo "    agents-reset     clear agents dashboard data"
 	@echo ""
 	@echo "  configuration:"
 	@echo "    configure        run onboarding wizard"
 	@echo "    audit            security audit"
 	@echo "    audit-fix        auto-fix security issues"
 	@echo "    validate         validate docker-compose config"
+	@echo "    validate-env     validate .env configuration"
 	@echo ""
 	@echo "  data management:"
 	@echo "    backup           export data/ and workspaces/"
@@ -60,6 +59,8 @@ help:
 # === quick start ===
 
 quickstart: setup up wait-ready
+	@chmod +x scripts/auto-pair-first.sh
+	@./scripts/auto-pair-first.sh &
 	@chmod +x scripts/check-provider.sh
 	@if ./scripts/check-provider.sh; then \
 		echo ""; \
@@ -163,17 +164,6 @@ dashboard: wait-ready
 	echo "http://127.0.0.1:$${PORT}/?token=$${TOKEN}"; \
 	echo ""
 
-agents-dashboard:
-	@echo "starting agents dashboard..."
-	@echo "open http://127.0.0.1:18790 in your browser"
-	@cd dashboard && TELEMETRY_PATH=../data/logs/telemetry.jsonl npm start
-
-agents-reset:
-	@echo "resetting agents dashboard data..."
-	@rm -f data/logs/telemetry.jsonl
-	@rm -f ~/.openclaw/dashboard/events.db*
-	@echo "done. telemetry log and database cleared."
-
 devices:
 	docker compose exec openclaw-gateway node dist/index.js devices list
 
@@ -201,6 +191,10 @@ audit-fix:
 validate:
 	@echo "validating docker-compose.yml..."
 	@docker compose config --quiet && echo "docker-compose.yml is valid"
+
+validate-env:
+	@chmod +x scripts/validate-env.sh
+	@./scripts/validate-env.sh
 
 # === data management ===
 
@@ -266,6 +260,16 @@ workspace-list:
 
 # === utilities ===
 
+colima-start:
+	@echo "starting colima (2 cpu, 1.5gb memory, 10gb disk)..."
+	colima start --cpu 2 --memory 1.5 --disk 10 --runtime docker
+
+colima-stop:
+	colima stop
+
+colima-status:
+	@colima status
+
 ps:
 	@echo "running containers:"
 	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
@@ -282,3 +286,7 @@ test:
 test-quick:
 	@echo "running layer 1 tests only..."
 	@SKIP_CONTAINER_TESTS=1 ./scripts/test.sh
+
+test-validate-env:
+	@chmod +x scripts/test-validate-env.sh
+	@./scripts/test-validate-env.sh

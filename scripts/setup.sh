@@ -68,13 +68,14 @@ echo
 echo "your gateway token:"
 grep "^OPENCLAW_GATEWAY_TOKEN=" .env | cut -d'=' -f2
 echo
-echo "next steps:"
-echo "  1. run: make up"
-echo "  2. run: make configure    (choose your AI provider)"
-echo "  3. open: http://127.0.0.1:18789"
+echo "next step:"
+echo "  make quickstart"
 echo
-echo "provider options:"
-echo "  - free: Kimi, MiniMax OAuth, or Qwen OAuth (via 'make configure')"
-echo "  - paid: set ANTHROPIC_API_KEY or OPENAI_API_KEY in .env"
-echo
-echo "see docs/PROVIDERS.md for details"
+echo "this will start the gateway and help you configure an ai provider."
+echo "free providers available - no api key required."
+
+# run wizard for interactive terminals
+if [ -t 0 ] && [ "${SKIP_WIZARD:-}" != "1" ]; then
+    chmod +x scripts/setup-wizard.sh
+    ./scripts/setup-wizard.sh || true
+fi
