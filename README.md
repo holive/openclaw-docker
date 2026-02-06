@@ -1,11 +1,28 @@
-# openclaw-docker
 
-A secure, zero-friction Docker wrapper for OpenClaw.
 
+<table>
+  <tr>
+  <td width="360">
+  <img src="https://github.com/user-attachments/assets/ade417a8-a159-4b3a-8195-061684c1b44e" alt="openclaw" width="360">
+  </td>
+  <td>
+
+  **openclaw-docker**
+
+  Zero-friction Docker wrapper for OpenClaw. Secure by default.
+
+  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](#)
+
+  </td>
+  </tr>
+  </table>
+  
+ ---
+ 
 ## Quick Start
 
 ```bash
-git clone https://github.com/xxx/openclaw-docker
+git clone https://github.com/holive/openclaw-docker
 cd openclaw-docker
 make quickstart
 ```
@@ -50,12 +67,11 @@ make help         # show all commands
 ## Security
 
 Default hardening:
-- Loopback binding (127.0.0.1 only)
+- Loopback binding (127.0.0.1 by default, configurable for remote)
 - Token authentication (64-char hex)
 - `cap_drop: ALL`
 - `no-new-privileges`
-- Memory limit (1.5GB)
-- PID limit (256)
+- PID limit (256, fork bomb protection)
 - tmpfs /tmp (64MB)
 
 See [docs/SECURITY.md](docs/SECURITY.md) for details on what Docker does and doesn't protect.

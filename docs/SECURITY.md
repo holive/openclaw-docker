@@ -6,11 +6,10 @@ This document explains what security measures are in place and their limitations
 
 | Measure | Default | Purpose |
 |---------|---------|---------|
-| Loopback binding | `127.0.0.1` | No external network access |
+| Loopback binding | `127.0.0.1` | No external network access (configurable via `OPENCLAW_BIND_IP`) |
 | Token auth | 64-char hex | Prevents unauthorized access |
 | cap_drop ALL | enabled | Removes all Linux capabilities |
 | no-new-privileges | enabled | Blocks privilege escalation |
-| Memory limit | 1.5GB | Resource constraint |
 | PID limit | 256 | Fork bomb protection |
 | tmpfs /tmp | 64MB | Volatile temp files |
 
@@ -45,9 +44,15 @@ By default, the gateway binds to `127.0.0.1` (loopback), meaning:
 To change this (use with caution):
 ```bash
 # in .env
-OPENCLAW_GATEWAY_BIND=lan       # local network only
-OPENCLAW_GATEWAY_BIND=0.0.0.0   # all interfaces (requires firewall)
+
+# for remote deployments (e.g., Hetzner + Tailscale)
+OPENCLAW_BIND_IP=100.x.x.x      # bind to specific IP (e.g., Tailscale IP)
+
+# container-level binding (inside docker)
+OPENCLAW_GATEWAY_BIND=lan       # app binds to 0.0.0.0 inside container
 ```
+
+For Hetzner deployments, `OPENCLAW_BIND_IP` is automatically set to the Tailscale IP by cloud-init.
 
 ## Token Authentication
 

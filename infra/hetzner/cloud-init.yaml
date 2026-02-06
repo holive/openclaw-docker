@@ -40,7 +40,7 @@ write_files:
 
       # clone and setup openclaw
       echo "cloning openclaw-docker..."
-      git clone https://github.com/openclaw/openclaw-docker.git /opt/openclaw-docker
+      git clone https://github.com/holive/openclaw-docker.git /opt/openclaw-docker
       cd /opt/openclaw-docker
 
       # generate .env
