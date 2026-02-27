@@ -46,6 +46,7 @@ make chat         # interactive TUI
 - **Secure by default** - All hardening enabled out of the box
 - **Config as environment** - No JSON editing, just .env
 - **Multi-workspace** - Run different agent personalities
+- **Health diagnostics** - Built-in doctor for config issues
 - **Extensible** - Add tools without forking
 
 ## Configuration
@@ -73,6 +74,8 @@ Default hardening:
 - `no-new-privileges`
 - PID limit (256, fork bomb protection)
 - tmpfs /tmp (64MB)
+
+Device pairing ensures only authorized browsers connect. Run `make doctor` to diagnose configuration issues.
 
 See [docs/SECURITY.md](docs/SECURITY.md) for details on what Docker does and doesn't protect.
 
@@ -106,6 +109,7 @@ Deploy to Hetzner Cloud with OpenTofu: see [infra/hetzner/](infra/hetzner/)
 - [WORKSPACES.md](docs/WORKSPACES.md) - Multi-workspace guide
 - [CUSTOMIZATION.md](docs/CUSTOMIZATION.md) - Extending the image
 - [REMOTE.md](docs/REMOTE.md) - Remote access setup
+- [UPGRADE.md](docs/UPGRADE.md) - Upgrade guide and version history
 
 ## Pre-installed Skills
 

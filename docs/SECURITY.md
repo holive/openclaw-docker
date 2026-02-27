@@ -75,6 +75,25 @@ The `AGENTS.md` template includes prompt injection defenses:
 - Requests to reveal system prompts or credentials
 - Chained instruction attacks
 
+## Secrets Management
+
+Store secrets in `.env`, not in `openclaw.json`. The entrypoint script merges environment variables into the config at startup, so:
+
+- `.env` is gitignored and stays on your machine
+- `openclaw.json` may be rewritten by upstream on restarts
+- Environment variables are the Docker-native way to pass secrets
+
+If you edit `openclaw.json` directly, be aware that upstream versions may overwrite your changes on certain operations.
+
+## Health Diagnostics
+
+Run the built-in doctor to check for configuration issues:
+
+```bash
+make doctor       # diagnose issues
+make doctor-fix   # auto-fix what it can
+```
+
 ## Recommendations
 
 1. **Never mount sensitive directories** - Don't mount `~/.ssh`, `~/.aws`, etc.

@@ -33,12 +33,59 @@ else
     skip "shellcheck (not installed)"
 fi
 
-# 2. docker-compose validation
+# 2. env-to-config.sh origins auto-config
+if command -v jq &> /dev/null; then
+    echo "testing origins auto-config..."
+    test_dir=$(mktemp -d)
+    test_config="${test_dir}/openclaw.json"
+    echo '{}' > "$test_config"
+
+    # test: OPENCLAW_BIND_IP set -> allowedOrigins populated
+    OPENCLAW_BIND_IP=10.0.0.1 OPENCLAW_GATEWAY_PORT=18789 \
+        ./scripts/env-to-config.sh "$test_config" > /dev/null 2>&1
+
+    origins=$(jq -r '.gateway.controlUi.allowedOrigins | length' "$test_config" 2>/dev/null)
+    local_origin=$(jq -r '.gateway.controlUi.allowedOrigins[0]' "$test_config" 2>/dev/null)
+    remote_origin=$(jq -r '.gateway.controlUi.allowedOrigins[1]' "$test_config" 2>/dev/null)
+
+    if [ "$origins" = "2" ] && \
+       [ "$local_origin" = "http://127.0.0.1:18789" ] && \
+       [ "$remote_origin" = "http://10.0.0.1:18789" ]; then
+        pass "origins auto-config (OPENCLAW_BIND_IP set)"
+    else
+        fail "origins auto-config: expected 2 origins, got ${origins}"
+    fi
+
+    # test: OPENCLAW_BIND_IP unset -> no allowedOrigins
+    echo '{}' > "$test_config"
+    OPENCLAW_BIND_IP='' ./scripts/env-to-config.sh "$test_config" > /dev/null 2>&1
+    origins_unset=$(jq -r '.gateway.controlUi.allowedOrigins // empty' "$test_config" 2>/dev/null)
+
+    if [ -z "$origins_unset" ]; then
+        pass "origins auto-config (OPENCLAW_BIND_IP unset)"
+    else
+        fail "origins auto-config: expected no origins when BIND_IP unset"
+    fi
+
+    rm -rf "$test_dir"
+else
+    skip "origins auto-config (jq not installed)"
+fi
+
+# 3. docker-compose validation
 echo "validating docker-compose.yml..."
 if make validate 2>/dev/null; then
     pass "docker-compose validation"
 else
     fail "docker-compose validation"
+fi
+
+# 4. env-to-config.sh exists in scripts/
+echo "checking env-to-config.sh..."
+if [ -f scripts/env-to-config.sh ] && [ -x scripts/env-to-config.sh ]; then
+    pass "env-to-config.sh exists and is executable"
+else
+    fail "env-to-config.sh missing or not executable"
 fi
 
 echo ""
@@ -66,7 +113,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# 3. setup test environment
+# 5. setup test environment
 echo "setting up test environment..."
 if [ ! -f .env ]; then
     cp .env.example .env
@@ -78,7 +125,7 @@ if [ -d templates/workspace ] && [ -z "$(ls -A workspaces/default 2>/dev/null)" 
 fi
 pass "environment setup"
 
-# 4. build
+# 6. build
 echo "building container..."
 if docker compose build --quiet; then
     pass "container build"
@@ -88,7 +135,7 @@ else
     exit 1
 fi
 
-# 5. start container
+# 7. start container
 echo "starting container..."
 docker compose down --remove-orphans 2>/dev/null || true
 if docker compose up -d; then
@@ -99,7 +146,7 @@ else
     exit 1
 fi
 
-# 6. wait for healthy
+# 8. wait for healthy
 echo "waiting for healthy status..."
 if make wait-ready; then
     pass "health check"
@@ -109,9 +156,10 @@ else
     exit 1
 fi
 
-# 7. verify files
+# 9. verify files
 echo "verifying container files..."
 if docker compose exec -T openclaw-gateway test -f /start-openclaw.sh && \
+   docker compose exec -T openclaw-gateway test -f /env-to-config.sh && \
    docker compose exec -T openclaw-gateway test -d /home/node/.openclaw && \
    docker compose exec -T openclaw-gateway test -f /home/node/.openclaw/openclaw.json; then
     pass "required files exist"

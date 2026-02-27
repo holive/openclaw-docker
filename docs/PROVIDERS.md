@@ -13,6 +13,12 @@ OpenClaw supports multiple AI providers, including free options that require no 
 | Ollama | None (local) | $0 | Runs on user hardware |
 | Anthropic | API key | Paid | Claude models |
 | OpenAI | API key | Paid | GPT models |
+| xAI | API key | Paid | Grok models |
+| Groq | API key | Free tier | Fast inference |
+| Mistral | API key | Free tier | Mistral/Mixtral models |
+| MiniMax | API key or OAuth | Free tier | MiniMax models |
+| Moonshot | API key | Free tier | Kimi models |
+| Volcano Engine | API key | Paid | ByteDance models |
 
 ## Quick Setup
 
@@ -80,6 +86,43 @@ For compatible endpoints (Azure, local proxies):
 ```bash
 OPENAI_API_KEY=your-key
 OPENAI_BASE_URL=https://your-endpoint.com/v1
+```
+
+### xAI (Grok)
+
+Set in `.env`:
+
+```bash
+XAI_API_KEY=xai-...
+```
+
+### Groq
+
+Fast inference platform with free tier. Set in `.env`:
+
+```bash
+GROQ_API_KEY=gsk_...
+```
+
+Sign up at groq.com.
+
+### Mistral
+
+Set in `.env`:
+
+```bash
+MISTRAL_API_KEY=...
+```
+
+Sign up at console.mistral.ai.
+
+### Search/Tool APIs
+
+These enable web search and tool capabilities:
+
+```bash
+BRAVE_API_KEY=...       # brave search api
+PERPLEXITY_API_KEY=...  # perplexity search api
 ```
 
 ## Switching Providers

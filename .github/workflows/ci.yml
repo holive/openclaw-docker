@@ -80,8 +80,13 @@ jobs:
       - name: verify files exist
         run: |
           docker compose exec -T openclaw-gateway test -f /start-openclaw.sh
+          docker compose exec -T openclaw-gateway test -f /env-to-config.sh
           docker compose exec -T openclaw-gateway test -d /home/node/.openclaw
           docker compose exec -T openclaw-gateway test -f /home/node/.openclaw/openclaw.json
+      - name: verify config merge
+        run: |
+          docker compose exec -T openclaw-gateway \
+            jq -e '.gateway.auth.token' /home/node/.openclaw/openclaw.json
       - name: logs on failure
         if: failure()
         run: docker compose logs
