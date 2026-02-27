@@ -53,12 +53,20 @@ merge_value '.channels.slack.appToken' "${SLACK_APP_TOKEN:-}"
 merge_value '.channels.mattermost.botToken' "${MATTERMOST_BOT_TOKEN:-}"
 merge_value '.channels.mattermost.url'      "${MATTERMOST_URL:-}"
 
-# auto-configure control ui origins for non-loopback binds
+# auto-configure control ui origins
+# gateway binds to lan (0.0.0.0) inside the container, which upstream treats
+# as non-loopback, so allowedOrigins is always required
+PORT="${OPENCLAW_GATEWAY_PORT:-18789}"
 if [ -n "${OPENCLAW_BIND_IP:-}" ]; then
-    PORT="${OPENCLAW_GATEWAY_PORT:-18789}"
+    # remote deployment: allow both loopback and the remote ip
     jq --arg local "http://127.0.0.1:${PORT}" \
        --arg remote "http://${OPENCLAW_BIND_IP}:${PORT}" \
        '.gateway.controlUi.allowedOrigins = [$local, $remote]' \
+       "$TMP_FILE" > "${TMP_FILE}.new" && mv "${TMP_FILE}.new" "$TMP_FILE"
+else
+    # local deployment: allow loopback only
+    jq --arg local "http://127.0.0.1:${PORT}" \
+       '.gateway.controlUi.allowedOrigins = [$local]' \
        "$TMP_FILE" > "${TMP_FILE}.new" && mv "${TMP_FILE}.new" "$TMP_FILE"
 fi
 

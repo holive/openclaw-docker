@@ -56,15 +56,18 @@ if command -v jq &> /dev/null; then
         fail "origins auto-config: expected 2 origins, got ${origins}"
     fi
 
-    # test: OPENCLAW_BIND_IP unset -> no allowedOrigins
+    # test: OPENCLAW_BIND_IP unset -> loopback-only origin
     echo '{}' > "$test_config"
-    OPENCLAW_BIND_IP='' ./scripts/env-to-config.sh "$test_config" > /dev/null 2>&1
-    origins_unset=$(jq -r '.gateway.controlUi.allowedOrigins // empty' "$test_config" 2>/dev/null)
+    OPENCLAW_BIND_IP='' OPENCLAW_GATEWAY_PORT=18789 \
+        ./scripts/env-to-config.sh "$test_config" > /dev/null 2>&1
 
-    if [ -z "$origins_unset" ]; then
-        pass "origins auto-config (OPENCLAW_BIND_IP unset)"
+    origins_local=$(jq -r '.gateway.controlUi.allowedOrigins | length' "$test_config" 2>/dev/null)
+    local_only=$(jq -r '.gateway.controlUi.allowedOrigins[0]' "$test_config" 2>/dev/null)
+
+    if [ "$origins_local" = "1" ] && [ "$local_only" = "http://127.0.0.1:18789" ]; then
+        pass "origins auto-config (OPENCLAW_BIND_IP unset, loopback only)"
     else
-        fail "origins auto-config: expected no origins when BIND_IP unset"
+        fail "origins auto-config: expected 1 loopback origin, got ${origins_local}"
     fi
 
     rm -rf "$test_dir"
