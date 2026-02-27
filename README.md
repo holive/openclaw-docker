@@ -27,7 +27,8 @@ make quickstart
 
 On first run, choose your AI provider:
 - **Free (no API key)**: Kimi, MiniMax OAuth, or Qwen OAuth - run `make configure`
-- **Paid**: Anthropic or OpenAI - set API key in `.env` first
+- **Paid**: Anthropic, OpenAI, xAI, etc. - set API key in `.env` first
+- **Via OpenRouter**: access multiple providers through a single key
 
 Or step by step:
 

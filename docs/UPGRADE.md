@@ -45,7 +45,17 @@ When `OPENCLAW_BIND_IP` is set (remote deployments), the Control UI allowed orig
 
 ## Upstream Breaking Changes (for reference)
 
-These are upstream changes that do NOT affect Docker users (handled internally):
+### Anthropic subscription tokens blocked (Jan 2026)
+
+Anthropic now blocks Claude Pro/Max subscription OAuth tokens from working in
+third-party tools including OpenClaw. If you were using a subscription token,
+you must switch to a Console API key (pay-per-token) or use OpenRouter.
+
+See [PROVIDERS.md](PROVIDERS.md#anthropic-claude) for details.
+
+### Internal changes (handled by openclaw-docker)
+
+These do NOT affect Docker users:
 
 - Entry point migrated from `dist/index.js` to `openclaw.mjs`
 - Config merge logic centralized in `env-to-config.sh`
