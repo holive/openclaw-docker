@@ -9,9 +9,7 @@
 
   **openclaw-docker**
 
-  Zero-friction Docker wrapper for OpenClaw. Secure by default.
-
-  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](#)
+  Zero-friction Docker wrapper for OpenClaw.
 
   </td>
   </tr>
