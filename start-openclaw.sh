@@ -74,7 +74,7 @@ merge_config() {
 merge_config
 
 # start openclaw gateway
-exec node dist/index.js gateway \
+exec node openclaw.mjs gateway \
     --bind "${OPENCLAW_GATEWAY_BIND:-lan}" \
     --port "${OPENCLAW_GATEWAY_PORT:-18789}" \
     --allow-unconfigured

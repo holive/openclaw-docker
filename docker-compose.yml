@@ -49,7 +49,7 @@ services:
           memory: ${OPENCLAW_MEMORY_LIMIT:-1536m}
           pids: 256
     healthcheck:
-      test: ["CMD", "node", "dist/index.js", "health"]
+      test: ["CMD", "node", "openclaw.mjs", "health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -74,7 +74,7 @@ services:
     stdin_open: true
     tty: true
     init: true
-    entrypoint: ["node", "dist/index.js"]
+    entrypoint: ["node", "openclaw.mjs"]
 
 volumes:
   openclaw-home:

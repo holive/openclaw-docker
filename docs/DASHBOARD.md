@@ -43,19 +43,19 @@ Then refresh your browser.
 List devices:
 
 ```bash
-docker compose exec openclaw-gateway node dist/index.js devices list
+docker compose exec openclaw-gateway node openclaw.mjs devices list
 ```
 
 Approve a specific device:
 
 ```bash
-docker compose exec openclaw-gateway node dist/index.js devices approve <request-id>
+docker compose exec openclaw-gateway node openclaw.mjs devices approve <request-id>
 ```
 
 Revoke a device:
 
 ```bash
-docker compose exec openclaw-gateway node dist/index.js devices revoke --device <device-id>
+docker compose exec openclaw-gateway node openclaw.mjs devices revoke --device <device-id>
 ```
 
 ## Why Pairing?

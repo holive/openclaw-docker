@@ -1,4 +1,4 @@
-.PHONY: quickstart setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps help test test-quick test-validate-env infra-init infra-plan infra-apply infra-destroy infra-output
+.PHONY: quickstart setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix doctor doctor-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps help test test-quick test-validate-env infra-init infra-plan infra-apply infra-destroy infra-output
 
 # default workspace
 WORKSPACE ?= default
@@ -31,6 +31,8 @@ help:
 	@echo "    configure        run onboarding wizard"
 	@echo "    audit            security audit"
 	@echo "    audit-fix        auto-fix security issues"
+	@echo "    doctor           health diagnostics"
+	@echo "    doctor-fix       auto-fix diagnosed issues"
 	@echo "    validate         validate docker-compose config"
 	@echo "    validate-env     validate .env configuration"
 	@echo ""
@@ -140,7 +142,7 @@ wait-ready:
 
 chat: wait-ready
 	@echo "connecting to workspace: $(WORKSPACE)"
-	@docker compose exec openclaw-gateway sh -c 'node dist/index.js tui --token $$(node -e "console.log(require(\"/home/node/.openclaw/openclaw.json\").gateway.auth.token)")'
+	@docker compose exec openclaw-gateway sh -c 'node openclaw.mjs tui --token $$(node -e "console.log(require(\"/home/node/.openclaw/openclaw.json\").gateway.auth.token)")'
 
 logs:
 	docker compose logs -f
@@ -149,15 +151,15 @@ shell:
 	docker compose exec openclaw-gateway /bin/sh
 
 status:
-	docker compose exec openclaw-gateway node dist/index.js status
+	docker compose exec openclaw-gateway node openclaw.mjs status
 
 health:
-	docker compose exec openclaw-gateway node dist/index.js health
+	docker compose exec openclaw-gateway node openclaw.mjs health
 
 # === configuration ===
 
 configure: wait-ready
-	docker compose exec openclaw-gateway node dist/index.js onboard
+	docker compose exec openclaw-gateway node openclaw.mjs onboard
 
 # alias for configure (mentioned in some docs)
 onboard: configure
@@ -172,28 +174,34 @@ dashboard: wait-ready
 	echo ""
 
 devices:
-	docker compose exec openclaw-gateway node dist/index.js devices list
+	docker compose exec openclaw-gateway node openclaw.mjs devices list
 
 pair:
 	@echo "approving all pending device requests..."
 	@docker compose exec openclaw-gateway sh -c '\
-		ids=$$(node dist/index.js devices list --json 2>/dev/null | \
+		ids=$$(node openclaw.mjs devices list --json 2>/dev/null | \
 			node -e "const d=JSON.parse(require(\"fs\").readFileSync(0,\"utf8\")); \
 			(d.pending||[]).forEach(p=>console.log(p.requestId))"); \
 		if [ -z "$$ids" ]; then \
 			echo "no pending requests"; \
 		else \
 			echo "$$ids" | while read id; do \
-				[ -n "$$id" ] && node dist/index.js devices approve "$$id"; \
+				[ -n "$$id" ] && node openclaw.mjs devices approve "$$id"; \
 			done; \
 		fi'
 	@echo "done. refresh your browser."
 
 audit:
-	docker compose exec openclaw-gateway node dist/index.js security audit --deep
+	docker compose exec openclaw-gateway node openclaw.mjs security audit --deep
 
 audit-fix:
-	docker compose exec openclaw-gateway node dist/index.js security audit --fix
+	docker compose exec openclaw-gateway node openclaw.mjs security audit --fix
+
+doctor: wait-ready
+	docker compose exec openclaw-gateway node openclaw.mjs doctor
+
+doctor-fix: wait-ready
+	docker compose exec openclaw-gateway node openclaw.mjs doctor --fix
 
 validate:
 	@echo "validating docker-compose.yml..."

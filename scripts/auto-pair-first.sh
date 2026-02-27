@@ -10,7 +10,7 @@ echo "waiting for first device connection..."
 elapsed=0
 while [ $elapsed -lt $MAX_WAIT ]; do
     devices_json=$(docker compose exec -T openclaw-gateway \
-        node dist/index.js devices list --json 2>/dev/null || echo '{}')
+        node openclaw.mjs devices list --json 2>/dev/null || echo '{}')
 
     # if already have paired devices, exit
     paired_count=$(echo "$devices_json" | \
@@ -35,7 +35,7 @@ while [ $elapsed -lt $MAX_WAIT ]; do
 
         if [ -n "$first_request_id" ]; then
             docker compose exec -T openclaw-gateway \
-                node dist/index.js devices approve "$first_request_id"
+                node openclaw.mjs devices approve "$first_request_id"
             echo "first device auto-paired"
             echo "future devices require: make pair"
             exit 0
