@@ -30,5 +30,8 @@ RUN chmod +x /tmp/user-setup.sh && /tmp/user-setup.sh
 COPY start-openclaw.sh /start-openclaw.sh
 RUN chmod +x /start-openclaw.sh
 
+COPY scripts/env-to-config.sh /env-to-config.sh
+RUN chmod +x /env-to-config.sh
+
 USER node
 ENTRYPOINT ["/start-openclaw.sh"]
