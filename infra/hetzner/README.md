@@ -14,6 +14,16 @@ This is the **IaC deployment path**.
 - Tailscale account with auth key
 - SSH key pair
 
+### Prerequisites Checklist
+
+Before running `tofu apply`, verify:
+
+1. You can run `tofu version` locally
+2. You have a Hetzner API token (`hcloud_token`)
+3. You have a reusable or ephemeral Tailscale auth key (`tailscale_authkey`)
+4. You have your SSH public key content ready (`ssh_public_key`, e.g. `ssh-ed25519 ...`)
+5. You are deploying an IPv4-enabled server (not IPv6-only)
+
 ## Quick Start
 
 ```bash
@@ -71,6 +81,22 @@ ARM servers (cax*) are cheaper. x86 available as cpx11/cpx21/cpx31.
 3. Check setup log: `cat /var/log/openclaw-setup.log`
 4. Get gateway token: `grep OPENCLAW_GATEWAY_TOKEN /opt/openclaw-docker/.env`
 
+### First Connection Smoke Test
+
+Run these checks on the server:
+
+```bash
+cd /opt/openclaw-docker
+make status
+docker compose ps
+docker compose logs --tail=50
+```
+
+Expected:
+- `openclaw-gateway` is running and healthy
+- setup log has no cloud-init failures
+- token is present in `/opt/openclaw-docker/.env`
+
 ### Connect via Tailscale
 
 From your local machine (with Tailscale installed):
@@ -96,6 +122,29 @@ tofu apply
 
 # destroy everything
 tofu destroy
+```
+
+### Terraform State Notes
+
+- `tofu destroy` only removes resources tracked in this Terraform state.
+- If you created a server manually in Hetzner Console, Terraform will not destroy it unless you import it first.
+- If a manual server exists and you want a clean IaC-only setup, delete that server in Hetzner Console before `tofu apply`.
+
+## SSH Hardening (Recommended)
+
+The cloud-init flow provides access, but you should harden SSH after first login:
+
+```bash
+sudo mkdir -p /etc/ssh/sshd_config.d
+printf "PasswordAuthentication no\nKbdInteractiveAuthentication no\nChallengeResponseAuthentication no\nPermitRootLogin prohibit-password\nPubkeyAuthentication yes\n" | \
+  sudo tee /etc/ssh/sshd_config.d/99-hardening.conf >/dev/null
+sudo sshd -t && sudo systemctl reload ssh
+```
+
+Verify password auth is blocked:
+
+```bash
+ssh -o PreferredAuthentications=password root@<server-ip>
 ```
 
 ## Troubleshooting
