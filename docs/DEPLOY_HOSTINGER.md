@@ -20,6 +20,17 @@ This repo handles:
 - A Tailscale auth key from your admin console
 - Local machine also connected to Tailscale
 
+### Tailscale Key Type (Important)
+
+Generate an auth key in Tailscale admin at:
+- `https://login.tailscale.com/admin/settings/keys`
+
+Recommended:
+- **Reusable key + expiry** for a long-lived VPS you may reprovision
+- **Ephemeral key** for temporary/testing VPS nodes
+
+Use the key as `--tailscale-authkey "tskey-xxxxx"` (or `TAILSCALE_AUTHKEY` env var).
+
 ## Option A: One Command From Your VPS
 
 SSH to your VPS and run:
@@ -115,4 +126,3 @@ make validate-env
 
 - Baseline setup is private-only via Tailscale (no public `18789` exposure).
 - If you need public HTTPS later, follow [REMOTE.md](REMOTE.md).
-

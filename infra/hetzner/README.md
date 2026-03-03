@@ -24,6 +24,17 @@ Before running `tofu apply`, verify:
 4. You have your SSH public key content ready (`ssh_public_key`, e.g. `ssh-ed25519 ...`)
 5. You are deploying an IPv4-enabled server (not IPv6-only)
 
+### Tailscale Key Type (Important)
+
+Generate an auth key in Tailscale admin at:
+- `https://login.tailscale.com/admin/settings/keys`
+
+Recommended for this flow:
+- **Reusable key + expiry** for long-lived server reprovisioning with Terraform
+- **Ephemeral key** for short-lived/test servers that should disappear cleanly
+
+Use this key value in `tailscale_authkey` in `terraform.tfvars`.
+
 ## Quick Start
 
 ```bash
