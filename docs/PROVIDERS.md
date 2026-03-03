@@ -159,7 +159,7 @@ Or edit provider settings directly:
 make shell
 vi ~/.openclaw/openclaw.json
 exit
-make down && make up
+make restart
 ```
 
 ## Troubleshooting
@@ -170,7 +170,7 @@ make down && make up
 
 **API key not recognized**
 - Check `.env` has no quotes around the key
-- Run `make down && make up` after editing `.env`
+- Run `make restart` after editing `.env`
 
 **Rate limits on free tier**
 - Switch to a different free provider

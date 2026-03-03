@@ -68,7 +68,13 @@ Device pairing ensures only authorized browsers can connect to your gateway, eve
 
 **Dashboard shows blank page**
 
-Container may not be running:
+Container may not be running. The quickest way to get back to a working state:
+
+```bash
+make resume
+```
+
+Or start just the container:
 
 ```bash
 make up

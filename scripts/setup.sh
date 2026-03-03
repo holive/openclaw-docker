@@ -58,9 +58,13 @@ fi
 # set secure permissions on env file
 chmod 600 .env 2>/dev/null || true
 
-# pull the image
-echo "pulling openclaw image..."
-docker pull ghcr.io/openclaw/openclaw:latest
+# pull the image (skip if already present)
+if docker image inspect ghcr.io/openclaw/openclaw:latest &>/dev/null; then
+    echo "openclaw image already present (skipping pull)"
+else
+    echo "pulling openclaw image..."
+    docker pull ghcr.io/openclaw/openclaw:latest
+fi
 
 echo
 echo "setup complete"

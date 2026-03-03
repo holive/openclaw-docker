@@ -39,6 +39,13 @@ make configure    # choose your AI provider (free options available)
 make chat         # interactive TUI
 ```
 
+## Resume
+
+```bash
+make resume       # start (if needed) and chat
+make info         # check status without starting anything
+```
+
 ## Features
 
 - **Zero friction** - Clone, setup, run in under 2 minutes
@@ -60,7 +67,9 @@ See [docs/PROVIDERS.md](docs/PROVIDERS.md) for all options.
 
 ```bash
 make quickstart   # first-time setup + start
-make chat         # interactive TUI
+make resume       # start (if needed) and chat
+make info         # check workspace, provider, container status
+make chat         # interactive TUI (requires running gateway)
 make help         # show all commands
 ```
 

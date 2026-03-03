@@ -1,4 +1,4 @@
-.PHONY: quickstart setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix doctor doctor-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps help test test-quick test-validate-env infra-init infra-plan infra-apply infra-destroy infra-output
+.PHONY: quickstart resume setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix doctor doctor-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps info help test test-quick test-validate-env infra-init infra-plan infra-apply infra-destroy infra-output
 
 # default workspace
 WORKSPACE ?= default
@@ -11,6 +11,7 @@ help:
 	@echo ""
 	@echo "  quick start:"
 	@echo "    quickstart       setup + up + chat (first-time users)"
+	@echo "    resume           start (if needed) and chat"
 	@echo "    setup            first-time initialization"
 	@echo ""
 	@echo "  lifecycle:"
@@ -26,6 +27,7 @@ help:
 	@echo "    shell            debug shell access"
 	@echo "    status           show model/auth status"
 	@echo "    health           health check"
+	@echo "    info             show workspace, provider, and container status"
 	@echo ""
 	@echo "  configuration:"
 	@echo "    configure        run onboarding wizard"
@@ -94,6 +96,16 @@ quickstart: setup up wait-ready
 		echo "docs: docs/PROVIDERS.md"; \
 	fi
 
+resume:
+	@if docker compose ps --quiet openclaw-gateway 2>/dev/null | grep -q .; then \
+		echo "gateway already running"; \
+	else \
+		echo "starting gateway..."; \
+		OPENCLAW_WORKSPACE=$(WORKSPACE) docker compose up -d; \
+	fi
+	@$(MAKE) wait-ready
+	@$(MAKE) chat
+
 setup:
 	@chmod +x scripts/setup.sh
 	@./scripts/setup.sh
@@ -142,7 +154,8 @@ wait-ready:
 
 chat: wait-ready
 	@echo "connecting to workspace: $(WORKSPACE)"
-	@docker compose exec openclaw-gateway sh -c 'node openclaw.mjs tui --token $$(node -e "console.log(require(\"/home/node/.openclaw/openclaw.json\").gateway.auth.token)")'
+	@TOKEN=$$(grep "^OPENCLAW_GATEWAY_TOKEN=" .env | cut -d'=' -f2); \
+	docker compose exec openclaw-gateway node openclaw.mjs tui --token "$$TOKEN"
 
 logs:
 	docker compose logs -f
@@ -155,6 +168,33 @@ status:
 
 health:
 	docker compose exec openclaw-gateway node openclaw.mjs health
+
+info:
+	@echo "openclaw-docker status"
+	@echo "====================="
+	@echo ""
+	@echo "  workspace:  $(WORKSPACE)"
+	@if [ -f .env ]; then \
+		TOKEN=$$(grep "^OPENCLAW_GATEWAY_TOKEN=" .env | cut -d'=' -f2); \
+		echo "  token:      $${TOKEN:0:8}..."; \
+		PROVIDERS=$$(grep "_API_KEY=" .env | grep -v "^#" | grep -v "=$$" | \
+			sed 's/_API_KEY=.*//' | tr '[:upper:]' '[:lower:]' | \
+			tr '\n' ', ' | sed 's/,$$//'); \
+		if [ -n "$$PROVIDERS" ]; then \
+			echo "  providers:  $$PROVIDERS"; \
+		else \
+			echo "  providers:  (none configured - run 'make configure')"; \
+		fi; \
+	else \
+		echo "  .env:       missing (run 'make setup')"; \
+	fi
+	@STATUS=$$(docker compose ps openclaw-gateway --format "{{.Status}}" 2>/dev/null) || true; \
+	if [ -n "$$STATUS" ]; then \
+		echo "  container:  $$STATUS"; \
+	else \
+		echo "  container:  not running"; \
+	fi
+	@echo ""
 
 # === configuration ===
 
