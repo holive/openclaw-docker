@@ -106,10 +106,16 @@ See [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for adding packages, toolchai
 
 ## Deployment
 
-Deploy to Hetzner Cloud with OpenTofu: see [infra/hetzner/](infra/hetzner/)
+Choose your deployment path:
+
+- **Hostinger VPS (manual + bootstrap script, Tailscale-first)**: [docs/DEPLOY_HOSTINGER.md](docs/DEPLOY_HOSTINGER.md)
+- **Hetzner Cloud (OpenTofu IaC)**: [infra/hetzner/](infra/hetzner/)
+- **Decision guide / index**: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ## Documentation
 
+- [DEPLOYMENT.md](docs/DEPLOYMENT.md) - Deployment paths (Hostinger vs Hetzner)
+- [DEPLOY_HOSTINGER.md](docs/DEPLOY_HOSTINGER.md) - Hostinger VPS guide (Tailscale-first)
 - [PROVIDERS.md](docs/PROVIDERS.md) - AI provider options (free and paid)
 - [DASHBOARD.md](docs/DASHBOARD.md) - Browser-based Control UI
 - [SECURITY.md](docs/SECURITY.md) - What Docker protects and doesn't
