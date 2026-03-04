@@ -5,7 +5,6 @@ Deploy OpenClaw to Hetzner Cloud using OpenTofu (Terraform-compatible).
 This is the **IaC deployment path**.
 
 - For a deployment path comparison, see [docs/DEPLOYMENT.md](../../docs/DEPLOYMENT.md)
-- For Hostinger VPS deployment, see [docs/DEPLOY_HOSTINGER.md](../../docs/DEPLOY_HOSTINGER.md)
 
 ## Prerequisites
 

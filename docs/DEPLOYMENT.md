@@ -1,36 +1,30 @@
 # Deployment Guide
 
-This repo supports two VPS deployment paths:
+This repo uses a single VPS deployment path:
 
-- **Hostinger VPS**: manual VPS provisioning, then run a bootstrap script from this repo
 - **Hetzner Cloud**: full infrastructure provisioning with OpenTofu
 
-If you cloned this repo to build your own personal agent setup (memory/workspaces/custom files), both paths keep your runtime data in:
+If you cloned this repo to build your own personal agent setup (memory/workspaces/custom files), runtime data is kept in:
 
 - `data/`
 - `workspaces/`
 
-## Choose Your Path
+## Deployment Path
 
 | Path | Best for | Provisioning model | Network default | Automation level |
 |------|----------|--------------------|-----------------|------------------|
-| [Hostinger VPS](DEPLOY_HOSTINGER.md) | Simple VPS flow with minimal IaC overhead | Create VPS in Hostinger panel, bootstrap over SSH | Tailscale private network | Near one-command after VPS creation |
 | [Hetzner + OpenTofu](../infra/hetzner/README.md) | Fully reproducible infra-as-code | `tofu init/plan/apply` | Tailscale private network | End-to-end infra + app automation |
 
 ## At a Glance
 
-1. **Hostinger path**
-   - You create the VPS
-   - Repo script installs Docker + Tailscale + OpenClaw stack
-   - Best when you want provider flexibility and direct control
-
-2. **Hetzner path**
-   - OpenTofu provisions server, firewall, and cloud-init bootstrap
-   - Best when you want infrastructure managed as code
+1. **Hetzner path**
+   - OpenTofu provisions server, firewall, SSH key, and cloud-init bootstrap
+   - Cloud-init installs Docker + Tailscale and starts `openclaw-docker`
+   - Best when you want infrastructure managed as code with repeatable deploys
 
 ## Security Defaults
 
-Both paths keep the same app-level defaults from this repo:
+The Hetzner path keeps the same app-level defaults from this repo:
 
 - Token-authenticated gateway
 - Docker hardening (`cap_drop: ALL`, `no-new-privileges`, PID limit)
@@ -39,4 +33,3 @@ Both paths keep the same app-level defaults from this repo:
 Read:
 - [SECURITY.md](SECURITY.md)
 - [REMOTE.md](REMOTE.md)
-
