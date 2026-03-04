@@ -1,4 +1,4 @@
-.PHONY: quickstart resume setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix doctor doctor-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps info help test test-quick test-validate-env infra-init infra-plan infra-apply infra-destroy infra-output
+.PHONY: quickstart resume setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix doctor doctor-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps info infra-check help test test-quick test-validate-env infra-init infra-plan infra-apply infra-destroy infra-output
 
 # default workspace
 WORKSPACE ?= default
@@ -54,6 +54,7 @@ help:
 	@echo ""
 	@echo "  utilities:"
 	@echo "    ps               show running containers"
+	@echo "    infra-check      deployment readiness checks"
 	@echo ""
 	@echo "  testing:"
 	@echo "    test             run full test suite"
@@ -334,6 +335,10 @@ ps:
 	@echo ""
 	@echo "resource usage:"
 	@docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}"
+
+infra-check:
+	@chmod +x scripts/infra-check.sh
+	@./scripts/infra-check.sh
 
 # === testing ===
 

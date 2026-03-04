@@ -86,10 +86,22 @@ ARM servers (cax*) are cheaper. x86 available as cpx11/cpx21/cpx31.
 
 ## After Deployment
 
-1. Wait ~3 minutes for cloud-init to finish
+`tofu apply` confirms infrastructure creation, but not full app readiness.
+
+1. Wait ~3 minutes for cloud-init bootstrap.
 2. SSH into the server: `tofu output ssh_command`
-3. Check setup log: `cat /var/log/openclaw-setup.log`
-4. Get gateway token: `grep OPENCLAW_GATEWAY_TOKEN /opt/openclaw-docker/.env`
+3. Run readiness checks:
+
+```bash
+cd /opt/openclaw-docker
+make infra-check
+```
+
+4. If readiness passes, get gateway token:
+
+```bash
+grep OPENCLAW_GATEWAY_TOKEN /opt/openclaw-docker/.env
+```
 
 ### First Connection Smoke Test
 
@@ -106,6 +118,7 @@ Expected:
 - `openclaw-gateway` is running and healthy
 - setup log has no cloud-init failures
 - token is present in `/opt/openclaw-docker/.env`
+- if provider is not configured yet, readiness shows a warning (not a hard failure)
 
 ### Connect via Tailscale
 
@@ -164,6 +177,7 @@ ssh -o PreferredAuthentications=password root@<server-ip>
 SSH in and check the log:
 ```bash
 cat /var/log/openclaw-setup.log
+cat /var/log/openclaw-bootstrap.status
 ```
 
 ### Gateway not starting
@@ -179,6 +193,23 @@ make logs
 ```bash
 tailscale status
 journalctl -u tailscaled
+```
+
+If `/var/log/openclaw-bootstrap.status` shows `ERROR=tailscale_auth_failed`, your auth key likely expired or is invalid.
+
+Fix:
+1. Generate a new Tailscale auth key.
+2. Update `tailscale_authkey` in `terraform.tfvars`.
+3. Recreate the server (`tofu destroy` + `tofu apply`) or rerun bootstrap manually.
+
+### Provider not configured yet
+
+This is a warning state (not infrastructure failure). Configure provider auth:
+
+```bash
+cd /opt/openclaw-docker
+make configure
+make restart
 ```
 
 ### SSH host key changed after recreate
