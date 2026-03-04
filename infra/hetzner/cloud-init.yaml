@@ -27,34 +27,34 @@ write_files:
       fail_with() {
         local code="$1"
         local reason="$2"
-        mark "FINAL=failed PHASE=${PHASE} ERROR=${reason} EXIT_CODE=${code}"
+        mark "FINAL=failed PHASE=$${PHASE} ERROR=$${reason} EXIT_CODE=$${code}"
         exit "$code"
       }
 
-      trap 'code=$?; mark "FINAL=failed PHASE=${PHASE} ERROR=unexpected EXIT_CODE=${code}"' ERR
+      trap 'code=$?; mark "FINAL=failed PHASE=$${PHASE} ERROR=unexpected EXIT_CODE=$${code}"' ERR
 
       : > "$STATUS_FILE"
-      mark "FINAL=running PHASE=${PHASE}"
+      mark "FINAL=running PHASE=$${PHASE}"
       echo "starting openclaw setup..."
 
       # install docker
       PHASE="docker_install"
-      mark "PHASE=${PHASE} RESULT=running"
+      mark "PHASE=$${PHASE} RESULT=running"
       echo "installing docker..."
       curl -fsSL https://get.docker.com | sh
       systemctl enable docker
       systemctl start docker
-      mark "PHASE=${PHASE} RESULT=ok"
+      mark "PHASE=$${PHASE} RESULT=ok"
 
       # install tailscale
       PHASE="tailscale_install"
-      mark "PHASE=${PHASE} RESULT=running"
+      mark "PHASE=$${PHASE} RESULT=running"
       echo "installing tailscale..."
       curl -fsSL https://tailscale.com/install.sh | sh
-      mark "PHASE=${PHASE} RESULT=ok"
+      mark "PHASE=$${PHASE} RESULT=ok"
 
       PHASE="tailscale_auth"
-      mark "PHASE=${PHASE} RESULT=running"
+      mark "PHASE=$${PHASE} RESULT=running"
       if ! tailscale up --authkey="${tailscale_authkey}" --hostname="${server_name}"; then
         fail_with 21 "tailscale_auth_failed"
       fi
@@ -62,11 +62,11 @@ write_files:
       if [ -z "$TAILSCALE_IP" ]; then
         fail_with 22 "tailscale_no_ipv4"
       fi
-      mark "PHASE=${PHASE} RESULT=ok TAILSCALE_IP=${TAILSCALE_IP}"
+      mark "PHASE=$${PHASE} RESULT=ok TAILSCALE_IP=$${TAILSCALE_IP}"
 
       # harden ssh (key-only auth, disable password login)
       PHASE="ssh_hardening"
-      mark "PHASE=${PHASE} RESULT=running"
+      mark "PHASE=$${PHASE} RESULT=running"
       echo "hardening ssh..."
       mkdir -p /etc/ssh/sshd_config.d
       cat > /etc/ssh/sshd_config.d/99-hardening.conf << 'SSHCONF'
@@ -78,22 +78,22 @@ write_files:
       SSHCONF
       sshd -t
       systemctl reload ssh
-      mark "PHASE=${PHASE} RESULT=ok"
+      mark "PHASE=$${PHASE} RESULT=ok"
 
       # configure firewall
       PHASE="firewall"
-      mark "PHASE=${PHASE} RESULT=running"
+      mark "PHASE=$${PHASE} RESULT=running"
       echo "configuring firewall..."
       ufw default deny incoming
       ufw default allow outgoing
       ufw allow ssh
       ufw allow in on tailscale0 to any port 18789 proto tcp
       echo "y" | ufw enable
-      mark "PHASE=${PHASE} RESULT=ok"
+      mark "PHASE=$${PHASE} RESULT=ok"
 
       # clone and setup openclaw
       PHASE="repo_clone"
-      mark "PHASE=${PHASE} RESULT=running"
+      mark "PHASE=$${PHASE} RESULT=running"
       echo "cloning openclaw-docker..."
       if [ -d "/opt/openclaw-docker/.git" ]; then
         echo "repo already exists (skipping clone)"
@@ -101,11 +101,11 @@ write_files:
         git clone https://github.com/holive/openclaw-docker.git /opt/openclaw-docker
       fi
       cd /opt/openclaw-docker
-      mark "PHASE=${PHASE} RESULT=ok"
+      mark "PHASE=$${PHASE} RESULT=ok"
 
       # generate .env
       PHASE="env_prepare"
-      mark "PHASE=${PHASE} RESULT=running"
+      mark "PHASE=$${PHASE} RESULT=running"
       if [ ! -f .env ]; then
         cp .env.example .env
       fi
@@ -120,17 +120,17 @@ write_files:
         echo "OPENCLAW_BIND_IP=$TAILSCALE_IP" >> .env
       fi
       chmod 600 .env
-      mark "PHASE=${PHASE} RESULT=ok"
+      mark "PHASE=$${PHASE} RESULT=ok"
 
       # setup and start
       PHASE="openclaw_setup"
-      mark "PHASE=${PHASE} RESULT=running"
+      mark "PHASE=$${PHASE} RESULT=running"
       echo "running make setup..."
       make setup
-      mark "PHASE=${PHASE} RESULT=ok"
+      mark "PHASE=$${PHASE} RESULT=ok"
 
       PHASE="gateway_start"
-      mark "PHASE=${PHASE} RESULT=running"
+      mark "PHASE=$${PHASE} RESULT=running"
       echo "starting gateway..."
       make up
 
@@ -153,11 +153,11 @@ write_files:
       if [ "$READY" -ne 1 ]; then
         fail_with 51 "gateway_not_ready"
       fi
-      mark "PHASE=${PHASE} RESULT=ok"
+      mark "PHASE=$${PHASE} RESULT=ok"
 
       # create systemd service for auto-restart on reboot
       PHASE="systemd_service"
-      mark "PHASE=${PHASE} RESULT=running"
+      mark "PHASE=$${PHASE} RESULT=running"
       cat > /etc/systemd/system/openclaw.service << 'SYSTEMD'
       [Unit]
       Description=OpenClaw Gateway
@@ -178,12 +178,12 @@ write_files:
 
       systemctl daemon-reload
       systemctl enable openclaw.service
-      mark "PHASE=${PHASE} RESULT=ok"
+      mark "PHASE=$${PHASE} RESULT=ok"
 
       PHASE="complete"
       echo "setup complete"
       echo "tailscale ip: $TAILSCALE_IP"
-      mark "FINAL=success PHASE=${PHASE} TAILSCALE_IP=${TAILSCALE_IP}"
+      mark "FINAL=success PHASE=$${PHASE} TAILSCALE_IP=$${TAILSCALE_IP}"
 
 runcmd:
   - /root/setup.sh > /var/log/openclaw-setup.log 2>&1
