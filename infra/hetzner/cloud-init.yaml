@@ -30,6 +30,19 @@ write_files:
       curl -fsSL https://tailscale.com/install.sh | sh
       tailscale up --authkey="${tailscale_authkey}" --hostname="${server_name}"
 
+      # harden ssh (key-only auth, disable password login)
+      echo "hardening ssh..."
+      mkdir -p /etc/ssh/sshd_config.d
+      cat > /etc/ssh/sshd_config.d/99-hardening.conf << 'SSHCONF'
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      ChallengeResponseAuthentication no
+      PermitRootLogin prohibit-password
+      PubkeyAuthentication yes
+      SSHCONF
+      sshd -t
+      systemctl reload ssh
+
       # configure firewall
       echo "configuring firewall..."
       ufw default deny incoming
