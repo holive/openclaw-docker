@@ -76,6 +76,8 @@ write_files:
       PermitRootLogin prohibit-password
       PubkeyAuthentication yes
       SSHCONF
+      mkdir -p /run/sshd
+      chmod 755 /run/sshd
       sshd -t
       systemctl reload ssh
       mark "PHASE=$${PHASE} RESULT=ok"
