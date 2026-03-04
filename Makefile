@@ -4,7 +4,7 @@
 WORKSPACE ?= default
 
 # wait-ready timeout (seconds)
-WAIT_TIMEOUT ?= 60
+WAIT_TIMEOUT ?= 120
 
 help:
 	@echo "openclaw-docker makefile"
@@ -147,8 +147,11 @@ wait-ready:
 	@i=0; while [ $$i -lt $(WAIT_TIMEOUT) ]; do \
 		status=$$(docker compose ps openclaw-gateway --format "{{.Health}}" 2>/dev/null); \
 		if [ "$$status" = "healthy" ]; then echo " ready"; exit 0; fi; \
+		if docker compose exec -T openclaw-gateway node openclaw.mjs health >/dev/null 2>&1; then \
+			echo " ready"; exit 0; \
+		fi; \
 		printf "."; sleep 1; i=$$((i + 1)); \
-	done; echo " timeout"; echo "error: gateway failed to become healthy"; docker compose logs --tail=50; exit 1
+	done; echo " timeout"; echo "error: gateway failed to become ready"; docker compose ps; docker compose logs --tail=50; exit 1
 
 # === operations ===
 
