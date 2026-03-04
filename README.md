@@ -111,6 +111,22 @@ Deployment is Hetzner-first with OpenTofu IaC:
 - **Hetzner Cloud (OpenTofu IaC)**: [infra/hetzner/](infra/hetzner/)
 - **Deployment guide / index**: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
+### Local-First Deploy (personal fork/copy)
+
+If your local copy contains files not committed to Git (for example custom memory/workspaces),
+`tofu apply` will not include them by default. Use local sync after provisioning:
+
+```bash
+# after tofu apply + readiness checks
+make sync-dry-run SERVER=root@<server-ip>
+make sync SERVER=root@<server-ip>
+make deploy-local SERVER=root@<server-ip>
+```
+
+Notes:
+- `.env` is excluded by default (set `INCLUDE_ENV=1` to include it intentionally)
+- runtime directories (`data/` and `workspaces/`) are synced in this workflow
+
 ## Documentation
 
 - [DEPLOYMENT.md](docs/DEPLOYMENT.md) - Hetzner deployment guide and entrypoint

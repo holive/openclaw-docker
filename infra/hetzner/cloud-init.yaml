@@ -103,6 +103,7 @@ write_files:
         git clone https://github.com/holive/openclaw-docker.git /opt/openclaw-docker
       fi
       cd /opt/openclaw-docker
+      mark "INFO=repo_baseline_ready NOTE=local_sync_can_override PATH=/opt/openclaw-docker"
       mark "PHASE=$${PHASE} RESULT=ok"
 
       # generate .env

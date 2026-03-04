@@ -1,4 +1,4 @@
-.PHONY: quickstart resume setup up down restart update rebuild wait-ready chat logs shell status health configure onboard dashboard devices pair pairing audit audit-fix doctor doctor-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps info infra-check help test test-quick test-validate-env infra-init infra-plan infra-apply infra-destroy infra-output
+.PHONY: quickstart resume setup up down restart update rebuild wait-ready chat logs shell status health configure onboard dashboard devices pair pairing audit audit-fix doctor doctor-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps info sync sync-dry-run deploy-local infra-check help test test-quick test-validate-env infra-init infra-plan infra-apply infra-destroy infra-output
 
 # default workspace
 WORKSPACE ?= default
@@ -55,6 +55,9 @@ help:
 	@echo ""
 	@echo "  utilities:"
 	@echo "    ps               show running containers"
+	@echo "    sync             rsync local project to remote server (SERVER=root@ip)"
+	@echo "    sync-dry-run     preview sync without changes (SERVER=root@ip)"
+	@echo "    deploy-local     sync + remote start (SERVER=root@ip)"
 	@echo "    infra-check      deployment readiness checks"
 	@echo ""
 	@echo "  testing:"
@@ -345,6 +348,31 @@ ps:
 	@echo ""
 	@echo "resource usage:"
 	@docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}"
+
+sync:
+ifndef SERVER
+	@echo "usage: make sync SERVER=root@<server-ip> [REMOTE_DIR=/opt/openclaw-docker] [DELETE=1] [INCLUDE_ENV=1]"
+	@exit 1
+endif
+	@chmod +x scripts/sync-local.sh
+	@SERVER="$(SERVER)" REMOTE_DIR="$(REMOTE_DIR)" DELETE="$(DELETE)" INCLUDE_ENV="$(INCLUDE_ENV)" ./scripts/sync-local.sh
+
+sync-dry-run:
+ifndef SERVER
+	@echo "usage: make sync-dry-run SERVER=root@<server-ip> [REMOTE_DIR=/opt/openclaw-docker]"
+	@exit 1
+endif
+	@chmod +x scripts/sync-local.sh
+	@SERVER="$(SERVER)" REMOTE_DIR="$(REMOTE_DIR)" DRY_RUN=1 ./scripts/sync-local.sh
+
+deploy-local: sync
+ifndef SERVER
+	@echo "usage: make deploy-local SERVER=root@<server-ip> [REMOTE_DIR=/opt/openclaw-docker]"
+	@exit 1
+endif
+	@REMOTE_DIR=$${REMOTE_DIR:-/opt/openclaw-docker}; \
+	echo "starting remote deployment on $(SERVER):$$REMOTE_DIR"; \
+	ssh "$(SERVER)" "if [ -f '$$REMOTE_DIR/.env' ]; then cd '$$REMOTE_DIR' && make up; else cd '$$REMOTE_DIR' && make setup && make up; fi"
 
 infra-check:
 	@chmod +x scripts/infra-check.sh

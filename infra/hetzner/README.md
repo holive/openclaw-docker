@@ -103,6 +103,23 @@ make infra-check
 grep OPENCLAW_GATEWAY_TOKEN /opt/openclaw-docker/.env
 ```
 
+### Local-First Sync (optional)
+
+Cloud-init bootstraps from the default public repo. If you deploy from a local copy with
+uncommitted/personal files, sync your local tree after `tofu apply`:
+
+```bash
+# run from repo root on your local machine
+make sync-dry-run SERVER=root@<server-ip>
+make sync SERVER=root@<server-ip>
+make deploy-local SERVER=root@<server-ip>
+```
+
+Defaults:
+- `.env` is excluded (set `INCLUDE_ENV=1` to include intentionally)
+- `data/` and `workspaces/` are included in sync
+- remote path defaults to `/opt/openclaw-docker` (override with `REMOTE_DIR=...`)
+
 ### First Connection Smoke Test
 
 Run these checks on the server:
@@ -228,3 +245,9 @@ ssh root@<server-ip>
 ```
 
 For maximum safety, verify the new host fingerprint in Hetzner Console before trusting it.
+
+### Editing cloud-init template
+
+This project renders `cloud-init.yaml` through OpenTofu `templatefile(...)`.
+When you need literal shell variables in the template, escape as `$${VAR}` (not `${VAR}`),
+otherwise OpenTofu will try to interpolate and fail.
