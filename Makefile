@@ -1,4 +1,4 @@
-.PHONY: quickstart resume setup up down restart update rebuild wait-ready chat logs shell status health configure audit audit-fix doctor doctor-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps info infra-check help test test-quick test-validate-env infra-init infra-plan infra-apply infra-destroy infra-output
+.PHONY: quickstart resume setup up down restart update rebuild wait-ready chat logs shell status health configure onboard dashboard devices pair pairing audit audit-fix doctor doctor-fix backup restore clean skill-install skill-list skill-remove workspace-new workspace-list validate validate-env ps info infra-check help test test-quick test-validate-env infra-init infra-plan infra-apply infra-destroy infra-output
 
 # default workspace
 WORKSPACE ?= default
@@ -31,6 +31,7 @@ help:
 	@echo ""
 	@echo "  configuration:"
 	@echo "    configure        run onboarding wizard"
+	@echo "    pairing          approve channel pairing code (CODE=x, CHANNEL=telegram)"
 	@echo "    audit            security audit"
 	@echo "    audit-fix        auto-fix security issues"
 	@echo "    doctor           health diagnostics"
@@ -234,6 +235,15 @@ pair:
 			done; \
 		fi'
 	@echo "done. refresh your browser."
+
+pairing:
+ifndef CODE
+	@echo "usage: make pairing CODE=PAIRING_CODE [CHANNEL=telegram]"
+	@exit 1
+endif
+	@CHANNEL=$${CHANNEL:-telegram}; \
+	echo "approving $$CHANNEL pairing code $(CODE)..."; \
+	docker compose exec -T openclaw-gateway node openclaw.mjs pairing approve "$$CHANNEL" "$(CODE)"
 
 audit:
 	docker compose exec openclaw-gateway node openclaw.mjs security audit --deep
