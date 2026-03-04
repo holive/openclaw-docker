@@ -108,8 +108,8 @@ See [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for adding packages, toolchai
 
 Choose your deployment path:
 
-- **Hostinger VPS (manual + bootstrap script, Tailscale-first)**: [docs/DEPLOY_HOSTINGER.md](docs/DEPLOY_HOSTINGER.md)
 - **Hetzner Cloud (OpenTofu IaC)**: [infra/hetzner/](infra/hetzner/)
+- **Hostinger VPS (manual + bootstrap script, Tailscale-first)**: [docs/DEPLOY_HOSTINGER.md](docs/DEPLOY_HOSTINGER.md)
 - **Decision guide / index**: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ## Documentation
