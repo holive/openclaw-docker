@@ -180,3 +180,20 @@ make logs
 tailscale status
 journalctl -u tailscaled
 ```
+
+### SSH host key changed after recreate
+
+If you destroy/recreate a server and reuse the same IP, SSH may fail with:
+
+`WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!`
+
+This is usually expected because the new server has a new host key.
+
+On your local machine:
+
+```bash
+ssh-keygen -R <server-ip>
+ssh root@<server-ip>
+```
+
+For maximum safety, verify the new host fingerprint in Hetzner Console before trusting it.
