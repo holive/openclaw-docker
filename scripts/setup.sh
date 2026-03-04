@@ -23,6 +23,60 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
+get_env_value() {
+    local key="$1"
+    grep "^${key}=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"'"'" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || true
+}
+
+set_env_value() {
+    local key="$1"
+    local value="$2"
+    if grep -q "^${key}=" .env; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "s|^${key}=.*$|${key}=${value}|" .env
+        else
+            sed -i "s|^${key}=.*$|${key}=${value}|" .env
+        fi
+    else
+        echo "${key}=${value}" >> .env
+    fi
+}
+
+detect_total_memory_mb() {
+    if [ -r /proc/meminfo ]; then
+        awk '/MemTotal/ { printf "%d", $2 / 1024 }' /proc/meminfo
+        return 0
+    fi
+    if command -v sysctl >/dev/null 2>&1; then
+        local bytes
+        bytes="$(sysctl -n hw.memsize 2>/dev/null || true)"
+        if [ -n "$bytes" ]; then
+            echo $((bytes / 1024 / 1024))
+            return 0
+        fi
+    fi
+    echo 2048
+}
+
+configure_dynamic_memory_limit() {
+    local total_mb mem_mb current_mem
+
+    total_mb="$(detect_total_memory_mb)"
+    mem_mb=$((total_mb * 75 / 100))
+    if [ "$mem_mb" -lt 768 ]; then
+        mem_mb=768
+    fi
+
+    current_mem="$(get_env_value "OPENCLAW_MEMORY_LIMIT")"
+
+    if [ -z "$current_mem" ]; then
+        set_env_value "OPENCLAW_MEMORY_LIMIT" "${mem_mb}m"
+        echo "auto-set OPENCLAW_MEMORY_LIMIT=${mem_mb}m (75% of ${total_mb}MB host RAM, root/bootstrap only)"
+    else
+        echo "OPENCLAW_MEMORY_LIMIT already set (${current_mem})"
+    fi
+}
+
 # generate gateway token if empty (handle whitespace)
 if grep -qE "^\s*OPENCLAW_GATEWAY_TOKEN=\s*$" .env; then
     echo "generating gateway token..."
@@ -35,6 +89,14 @@ if grep -qE "^\s*OPENCLAW_GATEWAY_TOKEN=\s*$" .env; then
     echo "token generated and saved to .env"
 else
     echo "gateway token already configured (skipping)"
+fi
+
+# auto-configure memory limit for server/bootstrap runs only (root context).
+# keep local/dev behavior unchanged unless user sets OPENCLAW_MEMORY_LIMIT manually.
+if [ "$(id -u)" -eq 0 ]; then
+    configure_dynamic_memory_limit
+else
+    echo "skipping automatic OPENCLAW_MEMORY_LIMIT on non-root setup"
 fi
 
 # create directories with secure permissions
