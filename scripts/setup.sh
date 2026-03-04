@@ -48,6 +48,13 @@ chmod 700 data/logs
 chmod 700 data/extensions
 chmod 700 workspaces
 
+# if setup is run as root (common in cloud-init), ensure mounted dirs are
+# writable by the container's node user (uid/gid 1000)
+if [ "$(id -u)" -eq 0 ]; then
+    echo "normalizing ownership for container user (uid/gid 1000)..."
+    chown -R 1000:1000 data workspaces
+fi
+
 # copy workspace templates if default workspace is empty
 if [ -d "templates/workspace" ] && [ -z "$(ls -A workspaces/default 2>/dev/null)" ]; then
     echo "copying workspace templates..."
